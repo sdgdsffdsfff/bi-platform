@@ -415,6 +415,13 @@ public class DataSourceResource extends BaseResource {
                     String productLine = dsG.getProductLine ();
                     assignNewValue (productLine, request, define);
                     assertPropertiesForDs (request, define);
+                    
+                    if (!dsService.isValidateConn(define, securityKey)) {
+                        rs.setStatus (1);
+                        rs.setStatusInfo ("无法连接数据源。请检查数据源是否正常或数据源信息是否正确。");
+                        return rs;
+                    }
+                    
                     // 添加数据源到数据源组
                     boolean result = dsG.addDataSourceDefine (define);
                     // 如果该数据源组未设置使用数据源，则设置该数据源为当前使用数据源
@@ -538,6 +545,11 @@ public class DataSourceResource extends BaseResource {
                         assertPropertiesForDs (request, define);
                         define.setDbPwd (define.getDbPwd ());
                         dsG.addDataSourceDefine (define);
+                        if (!dsService.isValidateConn(define, securityKey)) {
+                            rs.setStatus (1);
+                            rs.setStatusInfo ("无法连接数据源。请检查数据源是否正常或数据源信息是否正确。");
+                            return rs;
+                        }
                         // 更新活动数据源
                         if (dsG.getActiveDataSource () != null) {
                             if (dsG.getActiveDataSource ().getId ()
@@ -742,6 +754,11 @@ public class DataSourceResource extends BaseResource {
             } else {
                 Map<String, DataSourceDefine> dataSourceList = dsG
                         .getDataSourceList ();
+                if (!dsService.isValidateConn(dataSourceList.get (subId), securityKey)) {
+                    rs.setStatus (1);
+                    rs.setStatusInfo ("无法连接数据源。请检查数据源是否正常或数据源信息是否正确。");
+                    return rs;
+                }
                 if (dataSourceList != null
                         && dataSourceList.containsKey (subId)) {
                     dsG.setActiveDataSource (dataSourceList.get (subId));

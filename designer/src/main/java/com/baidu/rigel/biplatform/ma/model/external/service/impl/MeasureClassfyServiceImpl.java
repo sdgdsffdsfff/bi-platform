@@ -56,7 +56,7 @@ public class MeasureClassfyServiceImpl implements MeasureClassfyService {
     private static final String SQL = "SELECT FIRST_CLASS_TYPE, FIRST_CLASS_TYPE_NAME, FIRST_CLASS_TYPE_DESC,"
             + "SECOND_CLASS_TYPE, SECOND_CLASS_TYPE_NAME, SECOND_CLASS_TYPE_DESC,"
             + "THIRD_CLASS_TYPE, THIRD_CLASS_TYPE_NAME, THIRD_CLASS_TYPE_DESC,"
-            + "SELECTED_OPERATION_TYPE"
+            + "SELECTED_OPERATION_TYPE "
             + " FROM FACT_TAB_COL_META_CLASS";
     
     /* 
@@ -65,9 +65,9 @@ public class MeasureClassfyServiceImpl implements MeasureClassfyService {
      * #getChangableMeasureClassfyMeta(java.lang.String, com.baidu.rigel.biplatform.ma.model.ds.DataSourceDefine)
      */
     @Override
-    public List<MeasureClassfyObject> getChangableMeasureClassfyMeta(String table, DataSourceDefine ds, String secKey)
+    public List<MeasureClassfyObject> getChangableMeasureClassfyMeta(String table, DataSourceDefine ds, String secKey , String areaId)
         throws Exception {
-        List<String> tmp = genResultList (ds, secKey);
+        List<String> tmp = genResultList (ds, secKey , areaId);
         if (tmp.isEmpty ()) {
             return Lists.newArrayList ();
         }
@@ -78,15 +78,20 @@ public class MeasureClassfyServiceImpl implements MeasureClassfyService {
      * 
      * @param ds
      * @param secKey
+     * @param areaId
      * @return List<String>
      * @throws DataSourceOperationException
      * @throws DataSourceConnectionException
      * @throws SQLException
      */
-    private List<String> genResultList(DataSourceDefine ds, String secKey) 
+    private List<String> genResultList(DataSourceDefine ds, String secKey, String areaId) 
             throws DataSourceOperationException, DataSourceConnectionException,
             SQLException {
         List<String> tmp = Lists.newArrayList ();
+        String where = "";
+        if(!StringUtils.isEmpty(areaId)){
+            where = " WHERE AREA_ID = ? " ;
+        }
         String dbType = ds.getDataSourceType().name ();
         @SuppressWarnings("unchecked")
         DataSourceConnectionService<Connection> dsConnService = 
@@ -95,7 +100,10 @@ public class MeasureClassfyServiceImpl implements MeasureClassfyService {
         Connection conn = null;
         try {
             conn = (Connection) dsConnService.createConnection (ds, secKey);
-            PreparedStatement ps = conn.prepareStatement (SQL);
+            PreparedStatement ps = conn.prepareStatement (SQL+where);
+            if(!StringUtils.isEmpty(where)){
+                ps.setString(1, areaId);
+            }
             ResultSet rs = ps.executeQuery ();
             StringBuilder str = null;
             while (rs.next ()) {
@@ -109,7 +117,7 @@ public class MeasureClassfyServiceImpl implements MeasureClassfyService {
                 str.append (rs.getString ("THIRD_CLASS_TYPE") + "\t");
                 str.append (rs.getString ("THIRD_CLASS_TYPE_NAME") + "\t");
                 str.append (rs.getString ("THIRD_CLASS_TYPE_DESC") + "\t");
-                str.append (rs.getString ("SELECTED_OPERATION_TYPE"));
+                str.append (rs.getString ("SELECTED_OPERATION_TYPE") );                
                 tmp.add (str.toString ());
             }
         } finally {
@@ -186,13 +194,13 @@ public class MeasureClassfyServiceImpl implements MeasureClassfyService {
      * #getChangalbeMeasuerMeta(java.lang.String, com.baidu.rigel.biplatform.ma.model.ds.DataSourceDefine)
      */
     @Override
-    public List<String> getChangalbeMeasuerMeta(String factTable, DataSourceDefine ds, String secKey) {
+    public List<String> getChangalbeMeasuerMeta(String factTable, DataSourceDefine ds, String secKey, String areaId) {
         if (StringUtils.isEmpty (factTable)) {
             throw new RuntimeException ("fact table not be null");
         }
         final List<String> rs = Lists.newArrayList ();
         try {
-            List<MeasureClassfyObject> measuerClassfyMeta = getChangableMeasureClassfyMeta (factTable, ds, secKey);
+            List<MeasureClassfyObject> measuerClassfyMeta = getChangableMeasureClassfyMeta (factTable, ds, secKey,areaId);
             List<MeasureClassfyObject> tmp = Lists.newArrayList ();
             for (MeasureClassfyObject obj : measuerClassfyMeta) {
                 tmp.addAll (MeasureClassfyMetaUtils.getLeafMeasureMeta(obj));

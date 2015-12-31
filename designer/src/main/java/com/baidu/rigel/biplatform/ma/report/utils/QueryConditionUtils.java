@@ -268,6 +268,10 @@ public class QueryConditionUtils {
                                 data.setShow(false);
                             }
                         }
+                        
+//                        if (queryAction.getRows().size() == 1) {
+//                            data.setExpand(true);
+//                        }
                         datas.add(data);
                     }
                     if (values.isEmpty() && queryAction.isChartQuery()) {
@@ -281,7 +285,7 @@ public class QueryConditionUtils {
                     List<QueryData> datas = new ArrayList<QueryData>();
                     Dimension dim = (Dimension) olapElement;
                     if ((item.getPositionType() == PositionType.X || item.getPositionType() == PositionType.S)
-                        && queryAction.isChartQuery()) {
+                            && queryAction.isChartQuery()) {
                         QueryData data = new QueryData(dim.getAllMember().getUniqueName());
                         data.setExpand(true);
                         data.setShow(false);

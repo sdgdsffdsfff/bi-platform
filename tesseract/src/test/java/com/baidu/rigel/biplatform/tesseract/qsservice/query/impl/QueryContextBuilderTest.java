@@ -121,6 +121,7 @@ public class QueryContextBuilderTest {
         QueryData q = new QueryData ("[test].[test]");
         dimCondition.getQueryDataNodes ().add (q);
         MiniCube cube = new MiniCube ("test");
+        cube.setSource ("test");
         StandardDimension dim = new StandardDimension("test");
         dim.setType (DimensionType.CALLBACK);
         try {
@@ -157,7 +158,7 @@ public class QueryContextBuilderTest {
         DataSourceInfo info = Mockito.mock (DataSourceInfo.class);
         ArrayList<String> uniqueNameList = Lists.newArrayList ("[test].[test]");
         Mockito.doReturn (rs).when (service).lookUp (info, cube, uniqueNameList, null);
-        Assert.assertEquals (0, builder.buildFilterCondition (info, cube, dimCondition, null).size ());
+        Assert.assertEquals (1, builder.buildFilterCondition (info, cube, dimCondition, null).size ());
         MiniCubeMember m1 = new MiniCubeMember ("test1");
         rs.add (m1);
         MiniCubeMember m2 = new MiniCubeMember ("test2");

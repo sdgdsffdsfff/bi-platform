@@ -11,7 +11,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    padding: 5px;
+    padding: 2px;
 }
 .select-tree .select-tree-box {
     width: 200px;

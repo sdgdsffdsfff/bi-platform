@@ -15,7 +15,7 @@ define(['template'], function (template) {
         $out+=$escape($item.statusInfo);
         $out+='">';
         $out+=$escape($item.statusInfo);
-        $out+='</div></td>\n                        <td>\n                            <div class="list-btns">\n                                <span class="radius task-start c-p j-task-start" title="启动">\n                                    <span></span>\n                                </span>\n                                <span class="normal task-look c-p j-task-look" title="查看"><span></span></span>\n                                <span class="radius radius-red task-del c-p j-task-del" title="删除"><span></span></span>\n                            </div>\n                        </td>\n                        <td><div class="list-url text c-p ellipsis j-task-url" title="';
+        $out+='</div></td>\n                        <td>\n                            <div class="list-btns">\n                                <span class="biplt-radius biplt-start c-p j-task-start" title="启动">\n                                    <span></span>\n                                </span>\n                                <span class="biplt-normal biplt-look c-p j-task-look" title="查看"><span></span></span>\n                                <span class="biplt-radius biplt-radius-red biplt-del c-p j-task-del" title="删除"><span></span></span>\n                            </div>\n                        </td>\n                        <td><div class="list-url text c-p ellipsis j-task-url" title="';
         $out+=$escape($item.taskUrl);
         $out+='">';
         $out+=$escape($item.taskUrl);
@@ -25,7 +25,7 @@ define(['template'], function (template) {
         if(taskMgrList.length === 0){
         $out+='\n            <div class="empty-data ta-c">暂无数据</div>\n            ';
         }
-        $out+='\n        </div>\n        <div class="box-add c-f">\n            <span class="radius c-p task-add f-r j-task-add" title="新增任务">\n                <span></span>\n            </span>\n        </div>\n    </div>\n    <div class="f-r operation-btns j-operation-btns hide">\n        <span type="button" class="form-common-input-button mr-10 j-ok">完成</span>\n        <span type="button" class="form-common-input-button j-cancel">取消</span>\n    </div>\n</div>';
+        $out+='\n        </div>\n        <div class="box-add c-f">\n            <span class="biplt-radius c-p biplt-add f-r j-task-add" title="新增任务">\n                <span></span>\n            </span>\n        </div>\n    </div>\n    <div class="f-r operation-btns j-operation-btns hide">\n        <span type="button" class="form-common-input-button mr-10 j-ok">完成</span>\n        <span type="button" class="form-common-input-button j-cancel">取消</span>\n    </div>\n</div>';
         return $out;
     }
     return { render: anonymous };

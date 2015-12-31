@@ -68,30 +68,49 @@ public class RelationDBInfoReaderServiceImpl implements
 					getDataSourceConnectionServiceInstance(DataSourceType.MYSQL.name ());
 			conn = dsConnService.createConnection(ds, securityKey);
 			DatabaseMetaData dbMetaData = conn.getMetaData();
-			if (StringUtils.hasText(tableId)) {
-				ResultSet rs = dbMetaData.getColumns(null, null, tableId, "%");
-				while (rs.next()) {
-					String colName = rs.getString("COLUMN_NAME");
-					String comment = rs.getString("REMARKS");
-					ColumnInfo info = new ColumnInfo();
-					info.setId(colName);
-	                info.setName(colName);
-	                info.setComment(StringUtils.hasText(comment)? comment : colName);
-					lists.add((T) info);
-				}				
-			} else {
-	            String[] types = {"TABLE"};
-	            ResultSet rs = dbMetaData.getTables(null, null, "%", types);
-	            while (rs.next()) {
-	                TableInfo info = new TableInfo();
-	                String tableName = rs.getString("TABLE_NAME");
-	                String comment = rs.getString("REMARKS"); 
-	                info.setId(tableName);
-	                info.setName(tableName);
-	                info.setComment(comment);
-	                lists.add((T) info);
-	            }
-			}
+            if (StringUtils.hasText(tableId)) {
+                String allTable = "%";
+                ResultSet rs = null;
+                try {
+                    rs = dbMetaData.getColumns(null, null, tableId, allTable);
+                } catch (Exception e) {
+                    LOG.warn("get Column info warning:" + e);
+                }
+                while (rs != null && rs.next()) {
+                    String colName = null;
+                    String comment = null;
+                    try {
+                        colName = rs.getString("COLUMN_NAME");
+                        comment = rs.getString("REMARKS");
+                    } catch (Exception e) {
+                        LOG.warn("get Column info warning:" + e);
+                    }
+                    ColumnInfo info = new ColumnInfo();
+                    info.setId(colName);
+                    info.setName(colName);
+                    info.setComment(StringUtils.hasText(comment) ? comment : colName);
+                    lists.add((T) info);
+                }
+            } else {
+                String[] types = { "TABLE" };
+                String allTable = "%";
+                ResultSet rs = dbMetaData.getTables(null, null, allTable, types);
+                while (rs.next()) {
+                    TableInfo info = new TableInfo();
+                    String tableName = null;
+                    String comment = null;
+                    try {
+                        tableName = rs.getString("TABLE_NAME");
+                        comment = rs.getString("REMARKS");
+                    } catch (Exception e) {
+                        LOG.warn("get Tables info warning:" + e);
+                    }
+                    info.setId(tableName);
+                    info.setName(tableName);
+                    info.setComment(comment);
+                    lists.add((T) info);
+                }
+            }
 		}catch (DataSourceOperationException e) {
 			LOG.error("[ERROR] --- --- --- --- get ds connection instance error : {}", e.getMessage());
 		} catch (DataSourceConnectionException e) {

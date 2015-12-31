@@ -43,6 +43,7 @@ public final class DbConnectionServiceHelper {
             final RelationDBConnectionServiceImpl dsMetaService = new RelationDBConnectionServiceImpl();
             REPOSITORY.put(DataSourceType.MYSQL.name(), dsMetaService);
             REPOSITORY.put(DataSourceType.PALO.name(), dsMetaService);
+            REPOSITORY.put(DataSourceType.DRUID.name(), dsMetaService);
             REPOSITORY.put(DataSourceType.H2.name(), dsMetaService);
             REPOSITORY.put(DataSourceType.ORACLE.name(), dsMetaService);
             REPOSITORY.put(DataSourceType.MYSQL_DBPROXY.name(), dsMetaService);

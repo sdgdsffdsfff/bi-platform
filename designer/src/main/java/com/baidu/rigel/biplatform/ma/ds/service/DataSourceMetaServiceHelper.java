@@ -43,6 +43,7 @@ public final class DataSourceMetaServiceHelper {
             final DataSourceInfoReaderService dsMetaService = new RelationDBInfoReaderServiceImpl();
             SERVICE_REPOSITORY.put(DataSourceType.MYSQL.name(), dsMetaService);
             SERVICE_REPOSITORY.put(DataSourceType.PALO.name(), dsMetaService);
+            SERVICE_REPOSITORY.put(DataSourceType.DRUID.name(), dsMetaService);
             SERVICE_REPOSITORY.put(DataSourceType.H2.name(), dsMetaService);
             SERVICE_REPOSITORY.put(DataSourceType.ORACLE.name(), dsMetaService);
             SERVICE_REPOSITORY.put(DataSourceType.MYSQL_DBPROXY.name(),

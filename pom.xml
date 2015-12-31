@@ -76,15 +76,16 @@
     </properties>
 
     <modules>
-        <module>fileserver</module>
-        <module>model</module>
-        <module>designer</module>
-        <module>tesseract</module>
-        <module>parser</module>
         <module>cache</module>
-        <module>common-api</module>
-        <module>queryrouter</module>
-        <module>schedule</module>
+<module>parser</module>
+<module>model</module>
+<module>fileserver</module>
+<module>common-api</module>
+<module>schedule</module>
+<module>designer</module>
+<module>tesseract</module>
+<module>queryrouter</module>
+        
     </modules>
 
     <dependencyManagement>

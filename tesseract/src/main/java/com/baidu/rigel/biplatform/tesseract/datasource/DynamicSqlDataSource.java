@@ -195,17 +195,30 @@ public class DynamicSqlDataSource {
      * @throw IllegalArgumentException 无法找到数据源
      */
     public synchronized SqlDataSourceWrap getDataSource() {
+        long curr = System.currentTimeMillis();
         String key = getDataSourceKey();
+        LOGGER.info("dynamicDataSource.getDataSource cost: " + (System.currentTimeMillis() - curr) + " ms to getDataSourceKey");
+        curr = System.currentTimeMillis();
         SqlDataSourceWrap result = dataSources.get(key);
+        LOGGER.info("dynamicDataSource.getDataSource cost: " + (System.currentTimeMillis() - curr) + " ms to dataSources.get(key)");
+        curr = System.currentTimeMillis();
         Connection connection = null;
         try {
             connection = result.getConnection();
             LOGGER.info("validate datasource by key:" + key);
+            LOGGER.info("dynamicDataSource.getDataSource cost: " + (System.currentTimeMillis() - curr) + " ms to result.getConnection()");
+            curr = System.currentTimeMillis();
             validateConnection(connection);
             LOGGER.info("return datasource by key:" + key);
+            LOGGER.info("dynamicDataSource.getDataSource cost: " + (System.currentTimeMillis() - curr) + " ms to validateConnection(connection)");
+            curr = System.currentTimeMillis();
             // 先移除，在放进去才会在第一个
             accessValidDataSourceKeys.remove(key);
+            LOGGER.info("dynamicDataSource.getDataSource cost: " + (System.currentTimeMillis() - curr) + " ms to accessValidDataSourceKeys.remove(key);");
+            curr = System.currentTimeMillis();
             accessValidDataSourceKeys.add(key);
+            LOGGER.info("dynamicDataSource.getDataSource cost: " + (System.currentTimeMillis() - curr) + " ms to accessValidDataSourceKeys.add(key);");
+            curr = System.currentTimeMillis();
             return result;
         } catch (Exception e) {
             LOGGER.warn("datasource key:" + key + " is invalide,try another one!", e);
@@ -217,11 +230,15 @@ public class DynamicSqlDataSource {
             if(connection != null) {
                 try {
                     connection.close();
+                    LOGGER.info("dynamicDataSource.getDataSource cost: "
+                          + (System.currentTimeMillis() - curr)
+                          + " ms to connection.close();");
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
             }
         }
+        
     }
 
     /**
@@ -289,7 +306,7 @@ public class DynamicSqlDataSource {
                                                                  // is ok
         stmt.executeQuery();
         stmt.close();
-        LOGGER.debug("validate connection cost:" + (System.currentTimeMillis() - current));
+        LOGGER.info("validate connection cost:" + (System.currentTimeMillis() - current));
     }
 
     /**
@@ -370,7 +387,7 @@ public class DynamicSqlDataSource {
                     SqlDataSourceWrap ds = next.getValue();
                     String key = next.getKey();
                     if(ds.getFailCount() >= 10) {
-                        LOGGER.warn("Datasource key {} has fail more than 5 time,skip.", key );
+                        dynamicDataSource.failedMap.remove(key);
                         continue;
                     }
                     Connection con = null;

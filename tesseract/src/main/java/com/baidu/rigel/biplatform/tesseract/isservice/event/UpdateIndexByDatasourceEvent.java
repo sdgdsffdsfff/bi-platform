@@ -19,6 +19,7 @@
 package com.baidu.rigel.biplatform.tesseract.isservice.event;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.context.ApplicationEvent;
@@ -38,7 +39,7 @@ public class UpdateIndexByDatasourceEvent extends ApplicationEvent {
     /**
      * 要刷新的数据源Key信息
      */
-    private String dataSourceKey;
+    private List<String> dataSourceKeyList;
     
     /** 
      * dataSetNames 更新的数据集名称
@@ -55,15 +56,16 @@ public class UpdateIndexByDatasourceEvent extends ApplicationEvent {
     public UpdateIndexByDatasourceEvent(Object source) {
         super(source);
         if (source != null) {
-            dataSourceKey = (String) source;
+            dataSourceKeyList = (List<String>) source;
         }
     }
     
     /** 
      * 构造函数
      */
-    public UpdateIndexByDatasourceEvent(String dataSourceKey, String[] dataSetNames, Map<String,Map<String,BigDecimal>> dataSetMap) {
-        this(dataSourceKey);
+    public UpdateIndexByDatasourceEvent(List<String> dataSourceKeyList, String[] dataSetNames,
+            Map<String, Map<String, BigDecimal>> dataSetMap) {
+        this(dataSourceKeyList);
         this.dataSetNames = dataSetNames;
         this.dataSetMap=dataSetMap;
     }
@@ -71,8 +73,8 @@ public class UpdateIndexByDatasourceEvent extends ApplicationEvent {
     /** 
      * 构造函数
      */
-    public UpdateIndexByDatasourceEvent(String dataSourceKey, String[] dataSetNames) {
-        this(dataSourceKey);
+    public UpdateIndexByDatasourceEvent(List<String> dataSourceKeyList, String[] dataSetNames) {
+        this(dataSourceKeyList);
         this.dataSetNames = dataSetNames;
     }
     
@@ -81,8 +83,8 @@ public class UpdateIndexByDatasourceEvent extends ApplicationEvent {
      * 
      * @return the dataSourceKey
      */
-    public String getDataSourceKey() {
-        return dataSourceKey;
+    public List<String> getDataSourceKey() {
+        return dataSourceKeyList;
     }
     
     /**
@@ -91,8 +93,8 @@ public class UpdateIndexByDatasourceEvent extends ApplicationEvent {
      * @param dataSourceKey
      *            the dataSourceKey to set
      */
-    public void setDataSourceKey(String dataSourceKey) {
-        this.dataSourceKey = dataSourceKey;
+    public void setDataSourceKey(List<String> dataSourceKeyList) {
+        this.dataSourceKeyList = dataSourceKeyList;
     }
     
     /** 
@@ -121,7 +123,8 @@ public class UpdateIndexByDatasourceEvent extends ApplicationEvent {
      */
     @Override
     public String toString() {
-        return "UpdateIndexByDatasourceEvent [dataSourceKey=" + dataSourceKey + "][dataSetNames="+this.dataSetNames+"][dataSetMap="+this.dataSetMap+"]";
+        return "UpdateIndexByDatasourceEvent [dataSourceKeyList=" + dataSourceKeyList
+                + "][dataSetNames=" + this.dataSetNames + "][dataSetMap=" + this.dataSetMap + "]";
     }
     
 }

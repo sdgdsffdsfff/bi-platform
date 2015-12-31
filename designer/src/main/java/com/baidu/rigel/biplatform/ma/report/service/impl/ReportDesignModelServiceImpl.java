@@ -26,6 +26,7 @@ import java.util.Map;
 
 import javax.annotation.Resource;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -40,16 +41,19 @@ import com.baidu.rigel.biplatform.ac.model.Cube;
 import com.baidu.rigel.biplatform.ac.query.MiniCubeConnection;
 import com.baidu.rigel.biplatform.ac.query.MiniCubeDriverManager;
 import com.baidu.rigel.biplatform.ac.query.data.DataSourceInfo;
+import com.baidu.rigel.biplatform.ac.query.data.impl.SqlDataSourceInfo;
+import com.baidu.rigel.biplatform.ac.query.data.impl.SqlDataSourceInfo.DataBase;
 import com.baidu.rigel.biplatform.ac.util.DeepcopyUtils;
 import com.baidu.rigel.biplatform.api.client.service.FileService;
 import com.baidu.rigel.biplatform.api.client.service.FileServiceException;
-import com.baidu.rigel.biplatform.ma.ds.exception.DataSourceConnectionException;
 import com.baidu.rigel.biplatform.ma.ds.exception.DataSourceOperationException;
 import com.baidu.rigel.biplatform.ma.ds.service.DataSourceConnectionService;
 import com.baidu.rigel.biplatform.ma.ds.service.DataSourceConnectionServiceFactory;
+import com.baidu.rigel.biplatform.ma.ds.service.DataSourceGroupService;
 import com.baidu.rigel.biplatform.ma.ds.service.DataSourceService;
 import com.baidu.rigel.biplatform.ma.model.consts.Constants;
 import com.baidu.rigel.biplatform.ma.model.ds.DataSourceDefine;
+import com.baidu.rigel.biplatform.ma.model.ds.DataSourceGroupDefine;
 import com.baidu.rigel.biplatform.ma.model.utils.GsonUtils;
 import com.baidu.rigel.biplatform.ma.model.utils.UuidGeneratorUtils;
 import com.baidu.rigel.biplatform.ma.report.exception.QueryModelBuildException;
@@ -94,6 +98,12 @@ public class ReportDesignModelServiceImpl implements ReportDesignModelService {
      */
     @Resource
     private DataSourceService dsService;
+    
+    /**
+     * dsgService
+     */
+    @Resource
+    private DataSourceGroupService dsgService;
 
     @Value("${biplatform.ma.report.location}")
     private String reportBaseDir;
@@ -148,17 +158,18 @@ public class ReportDesignModelServiceImpl implements ReportDesignModelService {
         /**
          * 发布
          */
-        DataSourceDefine dsDefine;
-        DataSourceInfo dsInfo;
+        List<DataSourceInfo> dsInfoList;
         try {
-            dsDefine = dsService.getDsDefine(model.getDsId());
+            
+            DataSourceGroupDefine dataSourceGroupDefine = dsgService.getDataSourceGroupDefine(model.getDsId());
+            DataSourceDefine dsDefineActived = dsService.getDsDefine(model.getDsId());
             DataSourceConnectionService<?> dsConnService = DataSourceConnectionServiceFactory.
-                getDataSourceConnectionServiceInstance(dsDefine.getDataSourceType().name ());
-            dsInfo = dsConnService.parseToDataSourceInfo(dsDefine, securityKey);
+                    getDataSourceConnectionServiceInstance(dsDefineActived.getDataSourceType().toString ());
+            dsInfoList = dsConnService.getActivedDataSourceInfoList(dataSourceGroupDefine, securityKey);
         } catch (DataSourceOperationException e) {
             logger.error("Fail in Finding datasource define. ", e);
             throw e;
-        } catch (DataSourceConnectionException e) {
+        } catch (Exception e) {
             logger.error("Fail in parse datasource to datasourceInfo.", e);
             throw new DataSourceOperationException(e);
         }
@@ -180,16 +191,6 @@ public class ReportDesignModelServiceImpl implements ReportDesignModelService {
                 continue;
             }
         }
-        if (cubes.size() == 0) {
-            logger.info("cube is empty, don't need to create index!");
-            return true;
-        }
-        new Thread() {
-            public void run() {
-                MiniCubeConnection connection = MiniCubeDriverManager.getConnection(dsInfo);
-                connection.publishCubes(cubes, dsInfo);
-            }
-        }.start();
         return true;
     }
     

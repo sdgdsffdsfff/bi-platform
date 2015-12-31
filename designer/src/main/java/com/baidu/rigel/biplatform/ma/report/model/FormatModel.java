@@ -65,7 +65,7 @@ public class FormatModel implements Serializable {
     /**
      * 多维表格跳转信息定义,其中key为指标id，value为要跳转到的映射对象
      */
-    private Map<String, LinkInfo> linkInfo = Maps.newHashMap();
+    private Map<String, LinkInfo> linkInfo = Maps.newLinkedHashMap();
 
     /**
      * @return the dataFormat
@@ -188,7 +188,7 @@ public class FormatModel implements Serializable {
      */
     public Map<String, LinkInfo> getLinkInfo() {
         if (this.linkInfo == null) {
-            this.linkInfo = Maps.newHashMap();
+            this.linkInfo = Maps.newLinkedHashMap();
         }
         return linkInfo;
     }

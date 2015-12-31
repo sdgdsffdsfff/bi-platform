@@ -36,4 +36,11 @@ public interface SearchService {
      */
     SearchIndexResultSet query(QueryRequest query) throws IndexAndSearchException ;
     
+    /**
+     * 判断当前的query是否使用索引
+     * @param query
+     * @return
+     */
+    boolean hasIndexMeta(QueryRequest query);
+    
 }

@@ -395,7 +395,7 @@ public class RegularReportResource extends BaseResource {
         taskBo.setExecuteStrategy(executeTaskStrategy);
 //        // TODO 为方便调试，临时设置为每一分钟触发一次
 //        taskBo.setCronExpression("00 0/1 * * * ? ");
-        taskBo.setExcuteAction("/silkroad/reports/" + reportId + "/executeTask");
+        taskBo.setExcuteAction("silkroad/reports/" + reportId + "/executeTask");
         return taskBo;
     }
     /**
@@ -674,11 +674,11 @@ public class RegularReportResource extends BaseResource {
             model = reportModelCacheManager.getReportModel(reportId);
         } catch (Exception e) {
             if (model == null) {
-                // 如果缓存中取不到则从已发布文件中取
-                model = reportDesignModelService.getModelByIdOrName(reportId, true);
+                // 设计端先取本地未发布的
+                model = reportDesignModelService.getModelByIdOrName(reportId, false);
                 if (model == null) {
-                    // 如果从已发布中找不到，则从未发布中找
-                    model = reportDesignModelService.getModelByIdOrName(reportId, false);
+                    // 然后取已经发布的
+                    model = reportDesignModelService.getModelByIdOrName(reportId, true);
                 }
                 // 如果找不到报表，则报异常
                 if (model == null) {

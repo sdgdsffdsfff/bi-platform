@@ -472,11 +472,11 @@ public class RegularReportSettingServiceImpl implements RegularReportSettingServ
      */
     private ReportDesignModel getDesignModelAccordingReportId(String reportId) {
         // 如果从已发布中找不到，则从未发布中找 
-        ReportDesignModel model = reportDesignModelService.getModelByIdOrName(reportId, true);
-//        if (model == null) {
-//            // 如果缓存中取不到则从已发布文件中取
-//            model = reportDesignModelService.getModelByIdOrName(reportId, false);
-//        }
+        ReportDesignModel model = reportDesignModelService.getModelByIdOrName(reportId, false);
+        if (model == null) {
+            // 如果缓存中取不到则从已发布文件中取
+            model = reportDesignModelService.getModelByIdOrName(reportId, true);
+        }
         return model;
     }
     

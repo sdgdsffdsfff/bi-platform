@@ -102,6 +102,11 @@ public class TableData implements Serializable{
         public final String key;
         
         /**
+         * dataType
+         */
+        public final String dataType;
+        
+        /**
          * caption
          */
         public final String caption;
@@ -116,11 +121,12 @@ public class TableData implements Serializable{
          */
         private String dbName;
         
-        public Column(String key, String name, String caption, String tableName) {
+        public Column(String key, String name, String caption, String dataType, String tableName) {
             super ();
             this.key = key;
             this.name = name;
             this.caption = caption;
+            this.dataType = dataType;
             this.tableName = tableName;
         }
 
@@ -147,6 +153,7 @@ public class TableData implements Serializable{
             int result = 1;
             result = prime * result + ((name == null) ? 0 : name.hashCode ());
             result = prime * result + ((key == null) ? 0 : key.hashCode ());
+            result = prime * result + ((dataType == null) ? 0 : dataType.hashCode ());
             result = prime * result + ((tableName == null) ? 0 : tableName.hashCode ());
             return result;
         }
@@ -178,6 +185,13 @@ public class TableData implements Serializable{
                     return false;
                 }
             } else if (!key.equals (other.key)) {
+                return false;
+            }
+            if (dataType == null) {
+                if (other.dataType != null) {
+                    return false;
+                }
+            } else if (!dataType.equals (other.dataType)) {
                 return false;
             }
             if (tableName == null) {

@@ -79,10 +79,14 @@ define([
 
                 // 初始化报表公共功能模块
                 that.reportView = new ReportView({id: that.id});
-                // 初始化json与vm文件
-                that.model.initJson(function () {
-                    that.model.initVm(function () {
-                        that.showReport();
+
+                that.model.getFixReportTaskMgrList(that.id, function (data) {
+                    that.isFixReport = data;
+                    // 初始化json与vm文件
+                    that.model.initJson(function () {
+                        that.model.initVm(function () {
+                            that.showReport();
+                        });
                     });
                 });
             },
@@ -115,6 +119,17 @@ define([
                             var comT = (compType === 'REPORT_SAVE_COMP') ? 'DI_REPORTSAVE' : compType;
                             if (isHaveConfirmEntity(comT, entityDefs)) {
                                 dialog.alert('当前组件只能拖一个');
+                                return;
+                            }
+                        }
+                        if (that.isFixReport) {
+                            var componentType = [
+                                'TABLE',
+                                'CHART',
+                                'PLANE_TABLE'
+                            ];
+                            if (!$.isInArray(compType, componentType)) {
+                                dialog.alert('固定报表目前只支持表格，平面表，图形组件！');
                                 return;
                             }
                         }

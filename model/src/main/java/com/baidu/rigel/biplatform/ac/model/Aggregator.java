@@ -81,6 +81,18 @@ public enum Aggregator {
             throw new UnsupportedOperationException("unsupported aggregator:" + CALCULATED);
             
         }
+    },
+    
+    /**
+     * NONE
+     */
+    NONE // 无计算指标
+    {
+        @Override
+        public Serializable aggregate(Serializable src1, Serializable src2) {
+            throw new UnsupportedOperationException("unsupported aggregator:" + NONE);
+            
+        }
     };
 
     // /**

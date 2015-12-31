@@ -545,6 +545,29 @@ define(
                         }
                     }
                 });
+            },
+
+            /**
+             * 获取任务管理列表
+             *
+             * @param {string} reportId 报表id
+             * @param {Function} success 回调函数
+             *
+             * @public
+             */
+            getFixReportTaskMgrList: function (reportId, success) {
+                $.ajax({
+                    url: Url.getFixReportTaskMgrList(reportId),
+                    type: 'get',
+                    success: function (data) {
+                        if (data.data && data.data.length > 0) {
+                            success(true);
+                        }
+                        else {
+                            success(false);
+                        }
+                    }
+                });
             }
         });
     }

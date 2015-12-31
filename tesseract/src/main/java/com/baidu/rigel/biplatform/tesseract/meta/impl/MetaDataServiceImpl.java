@@ -19,6 +19,7 @@
 package com.baidu.rigel.biplatform.tesseract.meta.impl;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -233,50 +234,66 @@ public class MetaDataServiceImpl implements MetaDataService, BeanFactoryAware {
     }
 
     @Override
-    public void publish(List<Cube> cubes, DataSourceInfo dataSourceInfo) throws Exception {
+    public void publish(List<Cube> cubes, List<DataSourceInfo> dataSourceInfoList) throws Exception {
         // 将数据源信息和cube信息先扔到缓存中
-        dataSourcePoolService.initDataSourceInfo(dataSourceInfo);
+        dataSourcePoolService.initDataSourceInfoList(dataSourceInfoList);
         if (CollectionUtils.isNotEmpty(cubes)) {
             cubes.forEach((cube) -> cacheCube(cube));
         }
         // TODO 测试完成后，需要将最后一个参数改成false
-        InitMiniCubeInfo miniCubeInfo = new InitMiniCubeInfo(cubes, dataSourceInfo, true, false);
+        InitMiniCubeInfo miniCubeInfo = new InitMiniCubeInfo(cubes, dataSourceInfoList, true, false);
 
         InitMiniCubeEvent miniCubeEvent = new InitMiniCubeEvent(miniCubeInfo);
         storeManager.putEvent(miniCubeEvent);
     }
 
     @Override
-    public void refresh(DataSourceInfo dataSourceInfo, String dataSetStr) throws Exception {
-        MetaDataService.checkDataSourceInfo(dataSourceInfo);
-        if(StringUtils.isBlank(dataSetStr)) {
+    public void refresh(List<DataSourceInfo> dataSourceInfoList, String dataSetStr) throws Exception {
+        
+        if (StringUtils.isBlank(dataSetStr)) {
             LOG.error("dataSet name String is null,refresh all datasource");
             dataSetStr = "";
         }
-        LOG.info("refresh datasource:{} dataSet:{}",dataSourceInfo,dataSetStr);
+        final Gson gson = new Gson();        
+        Map<String, Map<String, BigDecimal>> dataSetMap = gson.fromJson(dataSetStr,
+            new TypeToken<Map<String, Map<String, BigDecimal>>>() {
+            }.getType());
         
-        final Gson gson = new Gson();
+        List<String> dataSourceKeyList=new ArrayList<String>();
         
-        Map<String,Map<String,BigDecimal>> dataSetMap=gson.fromJson(dataSetStr, new TypeToken<Map<String, Map<String,BigDecimal>>>() {}.getType());
+        for(DataSourceInfo dataSourceInfo:dataSourceInfoList){
+            if(MetaDataService.validateDataSourceInfo(dataSourceInfo)){
+                dataSourceKeyList.add(dataSourceInfo.getDataSourceKey());
+            }            
+        }        
+        
+        LOG.info("start refresh datasource:{} dataSet:{}",dataSourceInfoList,dataSetStr);
         if(dataSetMap!=null){
-        	UpdateIndexByDatasourceEvent updateEvent = new UpdateIndexByDatasourceEvent(dataSourceInfo.getDataSourceKey(), dataSetMap.keySet().toArray(new String[0]),dataSetMap);
+            UpdateIndexByDatasourceEvent updateEvent = new UpdateIndexByDatasourceEvent(dataSourceKeyList, dataSetMap.keySet().toArray(new String[0]),dataSetMap);
             storeManager.putEvent(updateEvent);
         }
+       
+        
         
     }
     
     @Override
-    public void refresh(DataSourceInfo dataSourceInfo, String dataSetStr, Map<String,Map<String,BigDecimal>> params) throws Exception {
-        MetaDataService.checkDataSourceInfo(dataSourceInfo);
+    public void refresh(List<DataSourceInfo> dataSourceInfoList, String dataSetStr, Map<String,Map<String,BigDecimal>> params) throws Exception {
+        
         if(StringUtils.isBlank(dataSetStr)) {
             LOG.error("dataSet name String is null,refresh all datasource");
             dataSetStr = "";
-        }
-        LOG.info("refresh datasource:{} dataSet:{}",dataSourceInfo,dataSetStr);
+        }        
+        List<String> dataSourceKeyList = new ArrayList<String>();
         
+        for (DataSourceInfo dataSourceInfo : dataSourceInfoList) {
+            if (MetaDataService.validateDataSourceInfo(dataSourceInfo)) {
+                dataSourceKeyList.add(dataSourceInfo.getDataSourceKey());
+            }
+        }  
         String[] dataSet=dataSetStr.split(",");
-        
-        UpdateIndexByDatasourceEvent updateEvent = new UpdateIndexByDatasourceEvent(dataSourceInfo.getDataSourceKey(), dataSet,params);
+        LOG.info("start refresh datasource:{} dataSet:{}",dataSourceInfoList,dataSetStr);
+        UpdateIndexByDatasourceEvent updateEvent = new UpdateIndexByDatasourceEvent(dataSourceKeyList, dataSet,params);
         storeManager.putEvent(updateEvent);
         
     }

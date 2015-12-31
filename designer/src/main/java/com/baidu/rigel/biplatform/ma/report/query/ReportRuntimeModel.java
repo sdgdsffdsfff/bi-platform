@@ -18,7 +18,6 @@ package com.baidu.rigel.biplatform.ma.report.query;
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -52,99 +51,90 @@ import com.google.common.collect.Sets;
  * @version 1.0.0.1
  */
 public class ReportRuntimeModel implements Serializable {
-    
+
     /**
      * serialized id
      */
     private static final long serialVersionUID = -7736213381907577058L;
-    
+
     /**
      * id
      */
     private String id;
-    
+
     /**
      * 定义模型：这里为定义模型的副本
      */
     private final String reportModelId;
-    
+
     /**
      * 报表数据信息key为由单次QueryAction生成的唯一id为该区域对应的数据
      */
     private Map<String, LinkedList<ResultSet>> datas = null;
-    
+
     /**
      * context信息：包括报表参数、过滤信息以及一些单张报表共享的全局信息
      */
     private QueryContext context;
-    
+
     /**
      * 时间维度的itemId列表
      */
     private List<String> timeDimItemIds = Lists.newArrayList();
-    
+
     /**
      * 选中的行
      */
     private Set<String> selectedRowIds;
-    
+
     /**
      * 扩展区域对于的局部上下文，优先级高于全剧上下文 key 为扩展区域id
      */
     private Map<String, QueryContext> localContext;
-    
+
     /**
      * 存储当前访问会话中，每个area对应的“维度名称-->Item”关系
      */
     private Map<String, Map<String, Item>> universalItemStore = Maps.newHashMap();
-    
+
     /**
      * 报表静态模型，要求在查询过程中，静态模型不变
      */
     private ReportDesignModel model;
-    
+
     /**
      * 当前RuntimeModel生成的最终原始报表id，如果为空，则与reportId相同
      */
     private String oriReportId;
-    
+
     /**
      * 是否已经初始化
      */
     private boolean isInited = false;
-    
+
     /**
      * 
-     * 以便记录操作记录，提供回放功能 添加快照，方便记录快照 添加序列化和反序列化机制，为离线浏览提供支持 添加websocket支持 提供分屏共享支持
-     * 提供下钻、上卷操作支持 提供行列转制支持
+     * 以便记录操作记录，提供回放功能 添加快照，方便记录快照 添加序列化和反序列化机制，为离线浏览提供支持 添加websocket支持 提供分屏共享支持 提供下钻、上卷操作支持 提供行列转制支持
      * 
      * 
      */
     private Map<String, LinkedList<QueryAction>> queryActions = null;
-    
-    /**
-     * 下钻查询action 历史纪录
-     */
-    private LinkedHashMap<String, DrillDownAction> drillDownQueryHistory = Maps.newLinkedHashMap();
-    
+
     /**
      * 排序后下钻数据行改变状态：key为下钻行nodeUniqueName, value为改编后行号
      */
-    private Map<String, Integer> orderedStatus = Maps.newHashMap ();
+    private Map<String, Integer> orderedStatus = Maps.newHashMap();
 
     private QueryAction linkedQueryAction;
 
     private SortRecord sortRecord;
-    
+
     private long createTime;
-    
-    
-    
+
     /**
      * 构造函数
      * 
-     * @param model
-     *            定义模型定义
+     * @param model 定义模型定义
      */
     public ReportRuntimeModel(String reportModelId) {
         this.reportModelId = reportModelId;
@@ -153,23 +143,22 @@ public class ReportRuntimeModel implements Serializable {
         this.localContext = Maps.newConcurrentMap();
         this.context = new QueryContext();
     }
-    
+
     /**
      * @return the universalItemStore
      */
     public Map<String, Map<String, Item>> getUniversalItemStore() {
         return universalItemStore;
     }
-    
-    
+
     public String getId() {
         return id;
     }
-    
+
     public void setId(String id) {
         this.id = id;
     }
-    
+
     /**
      * @return the oriReportId
      */
@@ -186,7 +175,7 @@ public class ReportRuntimeModel implements Serializable {
     public void setOriReportId(String oriReportId) {
         this.oriReportId = oriReportId;
     }
-    
+
     /**
      * get the datas
      * 
@@ -195,7 +184,7 @@ public class ReportRuntimeModel implements Serializable {
     public Map<String, LinkedList<ResultSet>> getDatas() {
         return datas;
     }
-    
+
     /**
      * get the reportModelId
      * 
@@ -204,16 +193,16 @@ public class ReportRuntimeModel implements Serializable {
     public String getReportModelId() {
         return reportModelId;
     }
-    
+
     /**
      * get the queryActions
      * 
      * @return the queryActions
      */
-    public Map<String, LinkedList<QueryAction>>  getQueryActions() {
+    public Map<String, LinkedList<QueryAction>> getQueryActions() {
         return queryActions;
     }
-    
+
     /**
      * 获取运行时报表的context
      * 
@@ -225,36 +214,36 @@ public class ReportRuntimeModel implements Serializable {
         }
         return this.context;
     }
-    
+
     /**
      * init
+     * 
      * @param model
      * @param force
      */
     public void init(ReportDesignModel model, boolean force) {
-//        if (!force) { 
-//            return;
-//        }
+        // if (!force) {
+        // return;
+        // }
         if (force) {
-            
-            this.queryActions.clear ();
-            this.datas.clear ();
-            this.drillDownQueryHistory.clear ();
-            this.localContext.clear ();
+
+            this.queryActions.clear();
+            this.datas.clear();
+            this.localContext.clear();
             context = new QueryContext();
         }
         isInited = true;
-        this.model =  DeepcopyUtils.deepCopy (model);
+        this.model = DeepcopyUtils.deepCopy(model);
         updateLogicModels(this.model);
         updateDimStores(this.model);
     }
-    
+
     /**
      * @param model
      */
     private void updateLogicModels(ReportDesignModel model) {
         Schema schema = model.getSchema();
-        model.getExtendAreas().values().forEach( area -> {
+        model.getExtendAreas().values().forEach(area -> {
             LogicModel logicModel = area.getLogicModel();
             if (logicModel == null) {
                 return;
@@ -266,7 +255,7 @@ public class ReportRuntimeModel implements Serializable {
             collectLiteOlapItem(schema, area, itemsToRemove);
             removeAll(area, logicModel, itemsToRemove);
         });
-        
+
     }
 
     /**
@@ -313,8 +302,8 @@ public class ReportRuntimeModel implements Serializable {
     private List<Item> collectCommonRemoveItem(Schema schema, ExtendArea area, LogicModel logicModel) {
         List<Item> itemsToRemove = Lists.newArrayList();
         for (Item item : logicModel.getItems()) {
-            OlapElement element = ReportDesignModelUtils.getDimOrIndDefineWithId(schema,
-                    area.getCubeId(), item.getOlapElementId());
+            OlapElement element =
+                    ReportDesignModelUtils.getDimOrIndDefineWithId(schema, area.getCubeId(), item.getOlapElementId());
             if (element == null) {
                 itemsToRemove.add(item);
             }
@@ -329,25 +318,37 @@ public class ReportRuntimeModel implements Serializable {
      */
     private void collectLiteOlapItem(Schema schema, ExtendArea area, List<Item> itemsToRemove) {
         if (area.getType() == ExtendAreaType.LITEOLAP) {
-            ((LiteOlapExtendArea) area).getCandDims().values().parallelStream().forEach(item -> {
-                OlapElement element = ReportDesignModelUtils.getDimOrIndDefineWithId(schema,
-                        area.getCubeId(), item.getOlapElementId());
-                if (element == null) {
-                    itemsToRemove.add(item);
-                }
-            });
-            ((LiteOlapExtendArea) area).getCandInds().values().parallelStream().forEach(item -> {
-                OlapElement element = ReportDesignModelUtils.getDimOrIndDefineWithId(schema,
-                        area.getCubeId(), item.getOlapElementId());
-                if (element == null) {
-                    itemsToRemove.add(item);
-                }
-            });
+            ((LiteOlapExtendArea) area)
+                    .getCandDims()
+                    .values()
+                    .parallelStream()
+                    .forEach(
+                            item -> {
+                                OlapElement element =
+                                        ReportDesignModelUtils.getDimOrIndDefineWithId(schema, area.getCubeId(),
+                                                item.getOlapElementId());
+                                if (element == null) {
+                                    itemsToRemove.add(item);
+                                }
+                            });
+            ((LiteOlapExtendArea) area)
+                    .getCandInds()
+                    .values()
+                    .parallelStream()
+                    .forEach(
+                            item -> {
+                                OlapElement element =
+                                        ReportDesignModelUtils.getDimOrIndDefineWithId(schema, area.getCubeId(),
+                                                item.getOlapElementId());
+                                if (element == null) {
+                                    itemsToRemove.add(item);
+                                }
+                            });
         }
     }
-    
+
     public void updateDimStores(ReportDesignModel model) {
-        this.model = DeepcopyUtils.deepCopy (model);
+        this.model = DeepcopyUtils.deepCopy(model);
         ExtendArea[] areas = model.getExtendAreaList();
         if (areas == null || areas.length == 0) {
             return;
@@ -364,22 +365,22 @@ public class ReportRuntimeModel implements Serializable {
             updateDimStore(model, area.getId());
         }
     }
-    
+
     private void updateDimStore(ReportDesignModel model, String areaId) {
         ExtendArea area = model.getExtendById(areaId);
         if (area.getLogicModel() != null) {
             /**
              * 为了联动需要，在runtimeModel中增加一个Map，存储维度名称与对应item对象
              */
-            Map<String, Item> store = getItemStoreWithDimNameKey(area.getLogicModel(),
-                    model.getSchema(), area.getCubeId());
+            Map<String, Item> store =
+                    getItemStoreWithDimNameKey(area.getLogicModel(), model.getSchema(), area.getCubeId());
             if (!CollectionUtils.isEmpty(store)) {
                 this.universalItemStore.put(area.getId(), store);
                 putTimeConditionIntoContext(store.values().iterator().next());
             }
         }
     }
-    
+
     /**
      * 
      * @param logicModel
@@ -387,12 +388,11 @@ public class ReportRuntimeModel implements Serializable {
      * @param cubeId
      * @return Map<String, Item>
      */
-    private Map<String, Item> getItemStoreWithDimNameKey(LogicModel logicModel, Schema schema,
-            String cubeId) {
+    private Map<String, Item> getItemStoreWithDimNameKey(LogicModel logicModel, Schema schema, String cubeId) {
         Map<String, Item> store = Maps.newHashMap();
         for (Item item : logicModel.getItems()) {
-            OlapElement element = ReportDesignModelUtils.getDimOrIndDefineWithId(schema, cubeId,
-                    item.getOlapElementId());
+            OlapElement element =
+                    ReportDesignModelUtils.getDimOrIndDefineWithId(schema, cubeId, item.getOlapElementId());
             if (element == null) {
                 continue;
             }
@@ -403,12 +403,11 @@ public class ReportRuntimeModel implements Serializable {
         }
         return store;
     }
-    
+
     /**
      * 将逻辑模型定义的数据信息更新到上下文
      * 
-     * @param logicModel
-     *            逻辑模型定义
+     * @param logicModel 逻辑模型定义
      */
     private void putIntoContext(LogicModel logicModel, ExtendAreaType type) {
         if (logicModel == null) {
@@ -426,7 +425,7 @@ public class ReportRuntimeModel implements Serializable {
             default:
         }
     }
-    
+
     /**
      * 将时间维度过滤信息放入上下文
      * 
@@ -448,20 +447,18 @@ public class ReportRuntimeModel implements Serializable {
             value.setStart(currentDate);
         }
     }
-    
+
     /**
      * 
      * 通过查询action更新数据模型
      * 
-     * @param action
-     *            查询action
-     * @param rs
-     *            把返回结果和查询动作更新到运行模型中
+     * @param action 查询action
+     * @param rs 把返回结果和查询动作更新到运行模型中
      * @return 数据模型
      * 
      */
     public ResultSet updateDatas(QueryAction action, ResultSet rs) {
-        if (this.queryActions.get(action.getExtendAreaId()) == null){
+        if (this.queryActions.get(action.getExtendAreaId()) == null) {
             LinkedList<QueryAction> actions = Lists.newLinkedList();
             actions.add(action);
             this.queryActions.put(action.getExtendAreaId(), actions);
@@ -476,36 +473,33 @@ public class ReportRuntimeModel implements Serializable {
         } else {
             this.datas.get(action.getExtendAreaId()).add(rs);
         }
-//        this.datas.put(action.getDistinctId(), rs);
+        // this.datas.put(action.getDistinctId(), rs);
         return rs;
     }
-    
+
     /**
      * 刷新整个报表模型
      * 
-     * @param usingCache
-     *            是否优先使用cache
+     * @param usingCache 是否优先使用cache
      */
     public void refresh(boolean usingCache) {
     }
-    
+
     /**
      * 下钻操作
      * 
-     * @param action
-     *            查询action
-     * @param rs
-     *            把返回结果和查询动作更新到运行模型中
+     * @param action 查询action
+     * @param rs 把返回结果和查询动作更新到运行模型中
      * @return 数据模型
      */
     public ResultSet drillDown(QueryAction action, ResultSet rs) {
         if (rs != null) {
             updateDatas(action, rs);
-//            this.datas.put(action.getDistinctId(), rs);
+            // this.datas.put(action.getDistinctId(), rs);
         }
         return rs;
     }
-    
+
     /**
      * @return the selectedRowIds
      */
@@ -515,15 +509,14 @@ public class ReportRuntimeModel implements Serializable {
         }
         return selectedRowIds;
     }
-    
+
     /**
-     * @param selectedRowIds
-     *            the selectedRowIds to set
+     * @param selectedRowIds the selectedRowIds to set
      */
     public void setSelectedRowIds(Set<String> selectedRowIds) {
         this.selectedRowIds = selectedRowIds;
     }
-    
+
     /**
      * 
      * @param areaId
@@ -539,45 +532,46 @@ public class ReportRuntimeModel implements Serializable {
             context.setExtendAreaId(areaId);
             this.localContext.put(areaId, context);
         }
-        
+
         return context;
     }
-    
+
     /**
      * 获取上次查询的查询结果
-     * @param previousAction 
+     * 
+     * @param previousAction
      * 
      * @return
      */
     public ResultSet getPreviousQueryResult(QueryAction previousAction) {
         if (previousAction == null) {
-                return null;
+            return null;
         }
         LinkedList<ResultSet> resultList = this.datas.get(previousAction.getExtendAreaId());
         if (resultList == null) {
-                return null;
+            return null;
         }
-        
+
         return resultList.isEmpty() ? null : resultList.getLast();
     }
-    
+
     /**
      * @return the timeDimItemIds
      */
     public List<String> getTimeDimItemIds() {
         return timeDimItemIds;
     }
-    
+
     public QueryAction getPreviousQueryAction(String areaId) {
         if (this.queryActions.get(areaId) == null) {
             return null;
         }
-//        for (int i = queryActions.size() - 1; i >= 0; --i) {
-//            if (this.queryActions.get(i).getExtendAreaId().equals(areaId)) {
-//                return this.queryActions.get(i);
-//            }
-//        }
-        
+        // for (int i = queryActions.size() - 1; i >= 0; --i) {
+        // if (this.queryActions.get(i).getExtendAreaId().equals(areaId)) {
+        // return this.queryActions.get(i);
+        // }
+        // }
+
         LinkedList<QueryAction> actionList = this.getQueryActions().get(areaId);
         return actionList.isEmpty() ? null : actionList.getLast();
     }
@@ -605,42 +599,23 @@ public class ReportRuntimeModel implements Serializable {
         this.getContext().put(Constants.IN_EDITOR, true);
     }
 
-    /**
-     * @return the drillDownQueryHistory
-     */
-    public LinkedHashMap <String, DrillDownAction> getDrillDownQueryHistory() {
-        if (this.drillDownQueryHistory == null) {
-            this.drillDownQueryHistory = Maps.newLinkedHashMap();
-        }
-        return drillDownQueryHistory;
-    }
-
-    /**
-     * @param drillDownQueryHistory the drillDownQueryHistory to set
-     */
-    public void setDrillDownQueryHistory(
-            LinkedHashMap<String, DrillDownAction> drillDownQueryHistory) {
-        this.drillDownQueryHistory = drillDownQueryHistory;
-    }
-    
     public static class DrillDownAction implements Serializable {
-        
+
         /**
          * 
          */
         private static final long serialVersionUID = 8254446539213186133L;
 
         public final QueryAction action;
-        
+
         public final int rowNum;
 
         public DrillDownAction(QueryAction action, int rowNum) {
-            super ();
+            super();
             this.action = action;
             this.rowNum = rowNum;
         }
-        
-        
+
     }
 
     public void setLinkedQueryAction(QueryAction action) {
@@ -678,8 +653,7 @@ public class ReportRuntimeModel implements Serializable {
     /**
      * @param universalItemStore the universalItemStore to set
      */
-    public void setUniversalItemStore(
-            Map<String, Map<String, Item>> universalItemStore) {
+    public void setUniversalItemStore(Map<String, Map<String, Item>> universalItemStore) {
         this.universalItemStore = universalItemStore;
     }
 
@@ -688,7 +662,7 @@ public class ReportRuntimeModel implements Serializable {
      */
     public Map<String, Integer> getOrderedStatus() {
         if (this.orderedStatus == null) {
-            this.orderedStatus = Maps.newHashMap ();
+            this.orderedStatus = Maps.newHashMap();
         }
         return orderedStatus;
     }
@@ -716,7 +690,7 @@ public class ReportRuntimeModel implements Serializable {
      */
     public long getCreateTime() {
         if (this.createTime == 0) {
-            this.createTime = System.currentTimeMillis ();
+            this.createTime = System.currentTimeMillis();
         }
         return createTime;
     }
@@ -727,6 +701,5 @@ public class ReportRuntimeModel implements Serializable {
     public void setCreateTime(long createTime) {
         this.createTime = createTime;
     }
-    
-    
+
 }

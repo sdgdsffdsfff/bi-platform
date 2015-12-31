@@ -29,6 +29,7 @@ import com.baidu.rigel.biplatform.ac.minicube.MiniCubeMember;
 import com.baidu.rigel.biplatform.ac.minicube.TimeDimension;
 import com.baidu.rigel.biplatform.ac.model.Cube;
 import com.baidu.rigel.biplatform.ac.model.Dimension;
+import com.baidu.rigel.biplatform.ac.model.DimensionType;
 import com.baidu.rigel.biplatform.ac.model.Level;
 import com.baidu.rigel.biplatform.ac.model.LevelType;
 import com.baidu.rigel.biplatform.ac.model.Member;
@@ -148,9 +149,15 @@ public interface DimensionMemberService extends BeanFactoryAware {
         // 一层层往下找，好像有问题，没有测试，还得修改
         while (i < names.length) {
             String name = names[i];
+            // 在级联下拉框的情况下，uniqueName会形如：[行业维度].[交通运输].[All_交通运输s]，
+            // 这时查member不需遍历到最后一层all节点，而只需取到[行业维度].[交通运输]这一级member即可
+            if (targetDim.getType() == DimensionType.GROUP_DIMENSION && MetaNameUtil.isAllMemberName(name)) {
+                break;
+            }
             MiniCubeMember member =
                     getDimensionMemberServiceByLevelType(level.getType()).getMemberFromLevelByName(dataSourceInfo,
                             cube, level, name, result, params);
+            
             // TODO 需要进一步处理 解决查询维度数据为空情况
             if (member == null) {
                 throw new MetaException("can not get name:" + name + "from level:" + level);

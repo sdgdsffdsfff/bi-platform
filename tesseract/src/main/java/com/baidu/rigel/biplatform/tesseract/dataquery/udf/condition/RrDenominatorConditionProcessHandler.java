@@ -15,6 +15,7 @@
  */
 package com.baidu.rigel.biplatform.tesseract.dataquery.udf.condition;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -22,6 +23,7 @@ import com.baidu.rigel.biplatform.ac.minicube.TimeDimension;
 import com.baidu.rigel.biplatform.ac.model.TimeType;
 import com.baidu.rigel.biplatform.ac.query.model.DimensionCondition;
 import com.baidu.rigel.biplatform.ac.query.model.MetaCondition;
+import com.baidu.rigel.biplatform.ac.util.ModelConstants;
 import com.baidu.rigel.biplatform.ac.util.TimeRangeDetail;
 import com.baidu.rigel.biplatform.ac.util.TimeUtils;
 import com.baidu.rigel.biplatform.tesseract.qsservice.query.vo.QueryContext;
@@ -32,7 +34,9 @@ import com.baidu.rigel.biplatform.tesseract.qsservice.query.vo.QueryContext;
  *
  */
 class RrDenominatorConditionProcessHandler  extends RateConditionProcessHandler {
-
+    
+    private static final SimpleDateFormat FORMAT = new SimpleDateFormat ("yyyyMMdd");
+    
     /**
      * {@inheritDoc}
      */
@@ -66,6 +70,8 @@ class RrDenominatorConditionProcessHandler  extends RateConditionProcessHandler 
         cal.setTime(firstDayOfTimeRange);
 //        cal.add(Calendar.DAY_OF_YEAR, -1);
         TimeRangeDetail timeRange = null;
+        String needSpecialTradeTime = 
+                adapter.getQuestionModel ().getRequestParams ().get (ModelConstants.NEED_SPECIAL_TRADE_TIME);
         switch (timeType) {
             case TimeDay:
                 MetaCondition condition = adapter.getQuestionModel().getQueryConditions().get(dimension.getName());
@@ -76,19 +82,43 @@ class RrDenominatorConditionProcessHandler  extends RateConditionProcessHandler 
                     size = dimCondition.getQueryDataNodes().size();
                 }
                 // 取昨天
-                timeRange = TimeUtils.getDays(cal.getTime(), 0, size - 1);
+                timeRange = TimeUtils.getDays(cal.getTime(), 0, size - 1);  
                 break;
             case TimeWeekly:
                 cal.add (Calendar.WEEK_OF_YEAR, -1);
                 timeRange = TimeUtils.getWeekDays(cal.getTime());
+                if ("true".equals (needSpecialTradeTime)) {
+                    String[] days = new String[4];
+                    for (int i = 0; i < days.length; ++i) {
+                        days[i] = FORMAT.format (cal.getTime ());
+                        cal.add (Calendar.WEEK_OF_YEAR, 1);
+                    }
+                    return createOrModifyNewContext(days, dimension, adapter);
+                }
                 break;
             case TimeMonth:
                 cal.add (Calendar.MONTH, -1);
                 timeRange = TimeUtils.getMonthDays(cal.getTime());
+                if ("true".equals (needSpecialTradeTime)) {
+                    String[] days = new String[12];
+                    for (int i = 0; i < days.length; ++i) {
+                        days[i] = FORMAT.format (cal.getTime ());
+                        cal.add (Calendar.MONTH, 1);
+                    }
+                    return createOrModifyNewContext(days, dimension, adapter);
+                }
                 break;
             case TimeQuarter:
                 cal.add (Calendar.MONTH, -3);
                 timeRange = TimeUtils.getQuarterDays(cal.getTime());
+                if ("true".equals (needSpecialTradeTime)) {
+                    String[] days = new String[4];
+                    for (int i = 0; i < days.length; ++i) {
+                        days[i] = FORMAT.format (cal.getTime ());
+                        cal.add (Calendar.MONTH, 3);
+                    }
+                    return createOrModifyNewContext(days, dimension, adapter);
+                }
                 break;
             case TimeYear:
                 cal.add (Calendar.YEAR, -1);

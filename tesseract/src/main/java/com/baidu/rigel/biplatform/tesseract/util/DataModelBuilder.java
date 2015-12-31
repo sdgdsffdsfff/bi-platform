@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import com.baidu.rigel.biplatform.ac.exception.MiniCubeQueryException;
 import com.baidu.rigel.biplatform.ac.minicube.MiniCubeMeasure;
 import com.baidu.rigel.biplatform.ac.model.Aggregator;
+import com.baidu.rigel.biplatform.ac.model.Cube;
 import com.baidu.rigel.biplatform.ac.query.data.DataModel;
 import com.baidu.rigel.biplatform.ac.query.data.HeadField;
 import com.baidu.rigel.biplatform.ac.util.DeepcopyUtils;
@@ -51,7 +52,7 @@ import com.google.common.collect.Maps;
  *
  */
 public class DataModelBuilder {
-    
+
     private static final String BLANK_ROW = "blankRow";
 
     /**
@@ -63,9 +64,8 @@ public class DataModelBuilder {
      * HEAD_KEY_SPLIT
      */
     private static final String HEAD_KEY_SPLIT = "_+_";
-    
-    
-    /** 
+
+    /**
      * PROP_KEY_SPLIT
      */
     private static final String PROP_KEY_SPLIT = "^_^";
@@ -90,11 +90,10 @@ public class DataModelBuilder {
      * 
      * @param tesseractResultSet
      */
-    public DataModelBuilder(
-        TesseractResultSet<SearchIndexResultRecord> tesseractResultSet, QueryContext queryContext) {
+    public DataModelBuilder(TesseractResultSet<SearchIndexResultRecord> tesseractResultSet, QueryContext queryContext) {
         if (tesseractResultSet == null) {
             log.warn("tesseractResultSet is null,return table head");
-//            throw new IllegalArgumentException("tesseractResultSet is null");
+            // throw new IllegalArgumentException("tesseractResultSet is null");
         }
         if (queryContext == null) {
             throw new IllegalArgumentException("queryContext is null");
@@ -103,102 +102,167 @@ public class DataModelBuilder {
         this.queryContext = queryContext;
     }
 
-    public DataModel build(boolean isContainsCallbackMeasure) throws MiniCubeQueryException {
+    public DataModel build(boolean isContainsCallbackMeasure, Cube cube) throws MiniCubeQueryException {
         DataModel dataModel = new DataModel();
         /**
          * get the order of row head
          */
         List<List<String>> rowNodeName = new ArrayList<List<String>>();
         List<MemberNodeTree> rowMemberTrees = queryContext.getRowMemberTrees();
-        List<MemberTreePropResult> rowHeadNames = getHeadNameByOrder(rowMemberTrees, 
-            rowNodeName, isContainsCallbackMeasure);
+        List<MemberTreePropResult> rowHeadNames =
+                getHeadNameByOrder(rowMemberTrees, rowNodeName, isContainsCallbackMeasure);
 
         /**
          * get the order of col head
          */
         List<List<String>> columnNodeName = new ArrayList<List<String>>();
         List<MemberNodeTree> columnMemberTrees = queryContext.getColumnMemberTrees();
-        List<MemberTreePropResult> colHeadNames = getHeadNameByOrder(columnMemberTrees, 
-            columnNodeName, false);
+        List<MemberTreePropResult> colHeadNames = getHeadNameByOrder(columnMemberTrees, columnNodeName, false);
         // 构造交叉后的行列取数的KEY
         List<String> rowAxisKeys = generateAxisKeys(rowNodeName, null);
         List<MiniCubeMeasure> queryMeasures = queryContext.getQueryMeasures();
         List<String> columnAxisKeys = generateAxisKeys(columnNodeName, queryMeasures);
 
-        if(this.tesseractResultSet != null){
+        if (this.tesseractResultSet != null) {
             Map<String, Map<String, BigDecimal>> parseData = null;
             try {
                 parseData = parseResultSet(rowHeadNames, colHeadNames);
             } catch (Exception e) {
                 throw new MiniCubeQueryException("get data from resultset error.", e);
             }
-            
+
             if (CollectionUtils.isNotEmpty(rowAxisKeys) && CollectionUtils.isNotEmpty(columnAxisKeys)) {
                 columnBaseDatas = new ArrayList<List<BigDecimal>>(columnAxisKeys.size());
+               
                 for (int i = 0; i < columnAxisKeys.size(); i++) {
                     String columnName = columnAxisKeys.get(i);
                     if (columnBaseDatas.size() < i + 1) {
                         columnBaseDatas.add(new ArrayList<BigDecimal>(rowAxisKeys.size()));
                     }
-                    if(CollectionUtils.isEmpty(rowAxisKeys)){
+                    if (CollectionUtils.isEmpty(rowAxisKeys)) {
                         rowAxisKeys.add(BLANK_ROW);
                     }
-                    
+
                     for (String rowName : rowAxisKeys) {
+//                        boolean needGetSum = needGetSumFromSubLevel(rowAxisKeys, rowName, cube, queryContext);
                         if (parseData.containsKey(rowName) && parseData.get(rowName).containsKey(columnName)) {
                             columnBaseDatas.get(i).add(parseData.get(rowName).get(columnName));
-                        } else {
+                        }
+                        // 已经在汇总逻辑处做了真正的向上汇总，所以此处不需要再进行拼装汇总了 
+                        
+                        // 因为维度组的一级汇总层级是拼装出来的，为简单处理，这里做一步直接向上汇总，
+                        // TODO 后续需要将这一步汇总放到后面的汇总逻辑里去做，不能这样简单将二级汇总直接复制到一级汇总 update by majun
+//                        else if (needGetSum) {
+//                            BigDecimal result = computeSum4VirtualLevel(rowAxisKeys, parseData, i, columnName);
+//                            columnBaseDatas.get(i).add(result);
+//                        } 
+                        else {
                             // 填充一个null对象
-                            columnBaseDatas.get (i).add (null);
-//                            columnBaseDatas.get(i).add(BigDecimal.ZERO);
+                            columnBaseDatas.get(i).add(null);
+                            // columnBaseDatas.get(i).add(BigDecimal.ZERO);
                         }
                     }
                 }
             }
-            
+
         }
 
         dataModel.setColumnBaseData(columnBaseDatas);
-        dataModel.setColumnHeadFields(buildAxisHeadFields(columnMemberTrees,
-                queryMeasures));
+        dataModel.setColumnHeadFields(buildAxisHeadFields(columnMemberTrees, queryMeasures));
         // 构建RowHeadField
         dataModel.setRowHeadFields(buildAxisHeadFields(rowMemberTrees, null));
 
         return dataModel;
     }
 
+//    /**
+//     * 为虚拟层级计算汇总数值，实际上是直接将下层子节点汇总赋值给当前节点
+//     * 
+//     * @param rowAxisKeys rowAxisKeys
+//     * @param parseData parseData
+//     * @param index index
+//     * @param columnName columnName
+//     * @return 返回计算出的虚拟父节点汇总值
+//     */
+//    private BigDecimal computeSum4VirtualLevel(List<String> rowAxisKeys,
+//            Map<String, Map<String, BigDecimal>> parseData, int index, String columnName) {
+//        BigDecimal result = null;
+//        for (String rowName : rowAxisKeys) {
+//            if (parseData.get(rowName) != null && parseData.get(rowName).get(columnName) != null) {
+//                result = parseData.get(rowName).get(columnName);
+//                break;
+//            }
+//        }
+//        return result;
+//    }
+
+//    /**
+//     * 判断是否需要从子层级汇总记录下来，以便统计上级汇总时直接进行赋值，该种情况只发生在但维度组出现在横轴上时进行判断
+//     * 
+//     * @param rowAxisKeys rowAxisKeys
+//     * @param rowName rowName
+//     * @param cube cube
+//     * @param queryContext queryContext
+//     * @return 如果需要记录汇总，返回true标签，反之返回false
+//     */
+//    private boolean needGetSumFromSubLevel(List<String> rowAxisKeys, String rowName, Cube cube,
+//            QueryContext queryContext) {
+//        boolean flag = false;
+//        if (queryContext instanceof QueryContextAdapter) {
+//            QueryContextAdapter queryContextAdapter = (QueryContextAdapter) queryContext;
+//            QuestionModel questionModel = queryContextAdapter.getQuestionModel();
+//            AxisMeta axisMeta = questionModel.getAxisMetas().get(AxisType.ROW);
+//            if (axisMeta.getCrossjoinDims().size() == 1) {
+//                String queryDimName = axisMeta.getCrossjoinDims().get(0);
+//                Dimension dimension =
+//                        cube.getDimensions().values().parallelStream()
+//                                .filter(dim -> dim.getName().equals(queryDimName)).findFirst().get();
+//
+//                if (dimension.getType() == DimensionType.GROUP_DIMENSION && rowAxisKeys.size() > 1
+//                        && queryContext.getRowMemberTrees().get(0).getChildren().size() == 1) {
+//                    // 如果发现拼凑的维度层级里面有对应的rowName所在维度，才要进行汇总
+//                    if (queryContextAdapter.getQueryContext().getDimsNeedSumBySubLevel()
+//                            .contains(rowName.split("\\^\\_\\^")[1])) {
+//                        flag = true;
+//                    }
+//                }
+//            }
+//        }
+//        return flag;
+//    }
+
     /**
      * 
      * 解析ResultSet转换成按照单元格数据,此方法生成的结果集为宽表模型
+     * 
      * @return 将ResultSet转换成的单元格数据
      * @throws Exception 取数的异常
      * 
      */
-    private Map<String, Map<String, BigDecimal>> parseResultSet(List<MemberTreePropResult> rowHeadNames, 
-            List<MemberTreePropResult> colHeadNames)
-            throws Exception {
+    private Map<String, Map<String, BigDecimal>> parseResultSet(List<MemberTreePropResult> rowHeadNames,
+            List<MemberTreePropResult> colHeadNames) throws Exception {
 
         // 结构是 列 行，指标 值
         /**
-         * data.key - 行的元数据的交叉值：比如dist与product交叉，dist维度值为:[1,2], product值为[3,4],data.key = [dist^_^1_+_product^_^3, ... ...] 
-         * data.value的map的key -- 列的元数据的交叉值 比如date与m1(指标字段名称)，date值为[2011,2012],交叉结果[date^_^2011_+_m1,......]
+         * data.key - 行的元数据的交叉值：比如dist与product交叉，dist维度值为:[1,2], product值为[3,4],data.key = [dist^_^1_+_product^_^3, ...
+         * ...] data.value的map的key -- 列的元数据的交叉值 比如date与m1(指标字段名称)，date值为[2011,2012],交叉结果[date^_^2011_+_m1,......]
          * dava.value的map的value -- 单元格的具体数值
          */
         Map<String, Map<String, BigDecimal>> data = Maps.newHashMap();
         SearchIndexResultRecord record = null;
         // 按行遍历结果集，构建基于单元格的数据模型
         while (this.tesseractResultSet.next()) {
-            
+
             record = (SearchIndexResultRecord) this.tesseractResultSet.getCurrentRecord();
             StringBuilder oneLine = new StringBuilder();
-            
+
             // 构建行轴元数据key的交叉值
             for (MemberTreePropResult rowHeadName : rowHeadNames) {
-                for(String prop : rowHeadName.queryPropers.keySet()) {
+                for (String prop : rowHeadName.queryPropers.keySet()) {
                     String value = tesseractResultSet.getString(prop);
-                    if (rowHeadName.queryPropers.get(prop).isEmpty() 
-                            || (rowHeadName.queryPropers.get(prop).contains(value) 
-                            && record.getGroupBy ().contains (value)) || value.equals(record.getGroupBy())) {
+                    if (rowHeadName.queryPropers.get(prop).isEmpty()
+                            || (rowHeadName.queryPropers.get(prop).contains(value) && record.getGroupBy().contains(
+                                    value)) || value.equals(record.getGroupBy())) {
                         oneLine.append(prop);
                         oneLine.append(PROP_KEY_SPLIT);
                         oneLine.append(value);
@@ -207,18 +271,19 @@ public class DataModelBuilder {
                     }
                 }
             }
-            if(oneLine.length() > 1){
+            if (oneLine.length() > 1) {
                 oneLine.delete(oneLine.length() - HEAD_KEY_SPLIT.length(), oneLine.length());
-            }else{
+            } else {
                 oneLine.append(BLANK_ROW);
             }
-            
+
             // 构建列轴元数据的交叉key
             StringBuilder oneColumn = new StringBuilder();
             for (MemberTreePropResult colHeadName : colHeadNames) {
-                for(String prop : colHeadName.queryPropers.keySet()) {
+                for (String prop : colHeadName.queryPropers.keySet()) {
                     String value = tesseractResultSet.getString(prop);
-                    if (colHeadName.queryPropers.get(prop).isEmpty() || colHeadName.queryPropers.get(prop).contains(value)) {
+                    if (colHeadName.queryPropers.get(prop).isEmpty()
+                            || colHeadName.queryPropers.get(prop).contains(value)) {
                         oneColumn.append(prop);
                         oneColumn.append(PROP_KEY_SPLIT);
                         oneColumn.append(value);
@@ -226,38 +291,38 @@ public class DataModelBuilder {
                         break;
                     }
                 }
-                
+
             }
-            
+
             // 获取单元格值
             Map<String, BigDecimal> colValues = Maps.newHashMap();
-            final String oneLineKey = oneLine.toString ();
+            final String oneLineKey = oneLine.toString();
             for (MiniCubeMeasure measure : queryContext.getQueryMeasures()) {
-//                if (measure.getAggregator () == Aggregator.CALCULATED) {
-//                    continue;
-//                }
+                // if (measure.getAggregator () == Aggregator.CALCULATED) {
+                // continue;
+                // }
                 final BigDecimal currentVal = tesseractResultSet.getBigDecimal(measure.getDefine());
                 StringBuilder columnKey = new StringBuilder();
                 columnKey.append(oneColumn);
                 columnKey.append(measure.getName());
-                if (data.containsKey (oneLineKey) ) {
-                    final BigDecimal oldVal = data.get (oneLineKey).get (columnKey.toString ());
-                    if (oldVal != null &&  currentVal != null && supportedCalculated (measure)) {
-                        final Serializable newTmp = measure.getAggregator ().aggregate (oldVal, currentVal);
-                        BigDecimal newVal = 
-                            newTmp instanceof BigDecimal ? (BigDecimal) newTmp : new BigDecimal(newTmp.toString ());
-//                    data.put(columnKey.toString(), newVal);
-                        data.get (oneLineKey).put (columnKey.toString (), newVal);
-                    } else if (data.containsKey (oneLineKey)) {
-                        data.get (oneLineKey).put (columnKey.toString (), currentVal);
-                    } 
+                if (data.containsKey(oneLineKey)) {
+                    final BigDecimal oldVal = data.get(oneLineKey).get(columnKey.toString());
+                    if (oldVal != null && currentVal != null && supportedCalculated(measure)) {
+                        final Serializable newTmp = measure.getAggregator().aggregate(oldVal, currentVal);
+                        BigDecimal newVal =
+                                newTmp instanceof BigDecimal ? (BigDecimal) newTmp : new BigDecimal(newTmp.toString());
+                        // data.put(columnKey.toString(), newVal);
+                        data.get(oneLineKey).put(columnKey.toString(), newVal);
+                    } else if (data.containsKey(oneLineKey)) {
+                        data.get(oneLineKey).put(columnKey.toString(), currentVal);
+                    }
                 } else {
                     colValues.put(columnKey.toString(), currentVal);
-                    data.put (oneLineKey, colValues);
+                    data.put(oneLineKey, colValues);
                 }
             }
-                // 单行数据构建完毕
-//            data.put(oneLineKey, colValues);
+            // 单行数据构建完毕
+            // data.put(oneLineKey, colValues);
         }
 
         return data;
@@ -269,16 +334,14 @@ public class DataModelBuilder {
      * @return boolean
      */
     private boolean supportedCalculated(MiniCubeMeasure measure) {
-        return measure.getAggregator () == Aggregator.COUNT 
-                || measure.getAggregator () == Aggregator.DISTINCT_COUNT
-                || measure.getAggregator () == Aggregator.SUM;
+        return measure.getAggregator() == Aggregator.COUNT || measure.getAggregator() == Aggregator.DISTINCT_COUNT
+                || measure.getAggregator() == Aggregator.SUM;
     }
 
     /**
-     * 依据维度成员以及指标定义构建行轴或者列轴的key字段
-     * 比如：地区产品交叉作为数据集的行，输入参数格式为：
-     * [[北京， 上海]，[食品，家电，玩具]]
-     * 返回结果[北京_+_食品，北京_+_家电，......, 上海_+_食品，......]
+     * 依据维度成员以及指标定义构建行轴或者列轴的key字段 比如：地区产品交叉作为数据集的行，输入参数格式为： [[北京， 上海]，[食品，家电，玩具]] 返回结果[北京_+_食品，北京_+_家电，......,
+     * 上海_+_食品，......]
+     * 
      * @param nodeNames 交叉维度名称
      * @param measures 如果取行轴标示，值为空(后续行列转置可能会有不同)
      * @return List<String> 按照顺序生成的轴的key
@@ -323,7 +386,7 @@ public class DataModelBuilder {
      * @param rowNodeName
      * @return 维度查询KEY列表
      */
-    private List<MemberTreePropResult> getHeadNameByOrder(List<MemberNodeTree> memberNodes, 
+    private List<MemberTreePropResult> getHeadNameByOrder(List<MemberNodeTree> memberNodes,
             List<List<String>> rowNodeName, boolean isContainsCallbackMeasure) {
         List<MemberTreePropResult> headNames = Lists.newArrayList();
         for (int i = 0; i < memberNodes.size(); i++) {
@@ -333,34 +396,34 @@ public class DataModelBuilder {
             }
             MemberTreePropResult treeProp = new MemberTreePropResult();
             rowNodeName.add(getNodeName(nodeTree, null, treeProp, isContainsCallbackMeasure));
-            if(MapUtils.isEmpty(treeProp.getQueryPropers())) {
-                log.warn("query proper:{} is null,skip",nodeTree);
+            if (MapUtils.isEmpty(treeProp.getQueryPropers())) {
+                log.warn("query proper:{} is null,skip", nodeTree);
                 continue;
             }
             headNames.add(treeProp);
-            
+
         }
         return headNames;
     }
-    
-    
-    
-    /** 
-     *  解析节点树的查询属性对应的值，中间结果，用完就扔,构造层内部类，方便后续添加属性
+
+    /**
+     * 解析节点树的查询属性对应的值，中间结果，用完就扔,构造层内部类，方便后续添加属性
+     * 
      * @author xiaoming.chen
-     * @version  2015年1月16日 
+     * @version 2015年1月16日
      * @since jdk 1.8 or after
      */
     class MemberTreePropResult {
-        
-        /** 
+
+        /**
          * queryPropers 非叶子节点对应的查询属性，VALUE为查询的值
          */
         private Map<String, Set<String>> queryPropers = new LinkedHashMap<String, Set<String>>(3);
 
-        /** 
-         * 获取 queryPropers 
-         * @return the queryPropers 
+        /**
+         * 获取 queryPropers
+         * 
+         * @return the queryPropers
          */
         public Map<String, Set<String>> getQueryPropers() {
             return queryPropers;
@@ -375,7 +438,7 @@ public class DataModelBuilder {
      * @param nodeNames 节点列表
      * @return 查询的节点的名称列表
      */
-    private List<String> getNodeName(MemberNodeTree nodeTree, List<String> nodeNames, 
+    private List<String> getNodeName(MemberNodeTree nodeTree, List<String> nodeNames,
             MemberTreePropResult treePropResult, boolean isContainsCallbackMeasure) {
         if (nodeNames == null) {
             nodeNames = new ArrayList<String>();
@@ -386,7 +449,7 @@ public class DataModelBuilder {
             if (allMemberName && nodeTree.getChildren().isEmpty()) {
                 return nodeNames;
             }
-            if(StringUtils.isNotBlank(prop)) {
+            if (StringUtils.isNotBlank(prop)) {
                 if (allMemberName && isContainsCallbackMeasure) {
                     nodeNames.add(prop + PROP_KEY_SPLIT + TesseractConstant.SUMMARY_KEY);
                 } else {
@@ -403,10 +466,10 @@ public class DataModelBuilder {
                     childProp = child.getQuerySource();
                 }
             }
-            if(StringUtils.isNotBlank(prop) && !prop.equals(childProp)) {
+            if (StringUtils.isNotBlank(prop) && !prop.equals(childProp)) {
                 treePropResult.getQueryPropers().get(prop).add(nodeTree.getName());
             }
-            
+
         }
         return nodeNames;
     }
@@ -485,7 +548,8 @@ public class DataModelBuilder {
         return nodes;
     }
 
-    public static List<HeadField> buildFieldsByMemberNodeTree(MemberNodeTree nodeTree, boolean isFirstNode, HeadField parent) {
+    public static List<HeadField> buildFieldsByMemberNodeTree(MemberNodeTree nodeTree, boolean isFirstNode,
+            HeadField parent) {
         List<HeadField> result = Lists.newArrayList();
         HeadField node = null;
         if (StringUtils.isNotBlank(nodeTree.getName())) {

@@ -123,7 +123,7 @@ public final class FileServerClient {
             };
             Bootstrap strap = new Bootstrap();
             strap.group(work).option(ChannelOption.TCP_NODELAY, true)
-                    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000).channel(NioSocketChannel.class)
+                    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000).channel(NioSocketChannel.class)
                     .handler(new ChannelInitializer<NioSocketChannel>() {
 
                         @Override

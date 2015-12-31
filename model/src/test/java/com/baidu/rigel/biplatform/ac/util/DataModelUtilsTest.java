@@ -15,11 +15,42 @@
  */
 package com.baidu.rigel.biplatform.ac.util;
 
+import org.junit.Assert;
+import org.junit.Test;
+
+
 /**
  *Description:
  * @author david.wang
  *
  */
 public class DataModelUtilsTest {
-    
+    @Test
+    public void testIsChar() {
+        Assert.assertTrue(DataModelUtils.isChar("varchar"));
+        Assert.assertTrue(DataModelUtils.isChar("varchar2"));
+        Assert.assertTrue(DataModelUtils.isChar("char"));
+        Assert.assertTrue(DataModelUtils.isChar("date"));
+        Assert.assertTrue(DataModelUtils.isChar("datetime"));
+        Assert.assertTrue(DataModelUtils.isChar("timestamp"));
+        Assert.assertTrue(DataModelUtils.isChar("blob"));
+        Assert.assertTrue(DataModelUtils.isChar("text"));
+        Assert.assertTrue(DataModelUtils.isChar("longtext"));
+        Assert.assertTrue(DataModelUtils.isChar("mediumblob"));
+        Assert.assertTrue(DataModelUtils.isChar("mediumtext"));
+        Assert.assertTrue(DataModelUtils.isChar("time"));
+        
+        Assert.assertFalse(DataModelUtils.isChar("int"));
+        Assert.assertFalse(DataModelUtils.isChar("bigint"));
+        Assert.assertFalse(DataModelUtils.isChar("decimal"));
+        Assert.assertFalse(DataModelUtils.isChar("bigint"));
+        Assert.assertFalse(DataModelUtils.isChar("double"));
+        Assert.assertFalse(DataModelUtils.isChar("float"));
+        Assert.assertFalse(DataModelUtils.isChar("mediumint"));
+        Assert.assertFalse(DataModelUtils.isChar("numeric"));
+        Assert.assertFalse(DataModelUtils.isChar("tinyint"));
+        Assert.assertFalse(DataModelUtils.isChar("bigint"));
+        Assert.assertFalse(DataModelUtils.isChar("long"));
+        Assert.assertFalse(DataModelUtils.isChar("integer"));
+    }
 }

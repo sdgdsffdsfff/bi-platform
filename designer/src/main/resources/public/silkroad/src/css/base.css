@@ -74,6 +74,9 @@ a {
 .mt-1 {
     margin-top: 1px;
 }
+.mt-3 {
+    margin-top: 3px;
+}
 .mt-5 {
     margin-top: 5px;
 }
@@ -97,6 +100,9 @@ a {
 }
 .mt-260 {
     margin-top: 260px;
+}
+.mr-3 {
+    margin-right: 3px;
 }
 .mr-10 {
     margin-right: 10px;

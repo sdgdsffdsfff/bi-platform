@@ -206,25 +206,25 @@ public class IndexServiceImpl implements IndexService {
 	 */
 	@Override
 	public boolean initMiniCubeIndex(List<Cube> cubeList,
-			DataSourceInfo dataSourceInfo, boolean indexAsap, boolean limited) {
+			List<DataSourceInfo> dataSourceInfoList, boolean indexAsap, boolean limited) {
 		/**
 		 * 当通过MiniCubeConnection.publishCubes(List<String> cubes, DataSourceInfo
 		 * dataSourceInfo);通知索引服务端建立索引数据
 		 */
 		LOGGER.info(String.format(LogInfoConstants.INFO_PATTERN_FUNCTION_BEGIN,
 				"initMiniCubeIndex", "[cubeList:" + cubeList
-						+ "][dataSourceInfo:" + dataSourceInfo + "][indexAsap:"
+						+ "][dataSourceInfoList:" + dataSourceInfoList + "][indexAsap:"
 						+ indexAsap + "][limited:" + limited + "]"));
 
 		// step 1 process cubeList and fill indexMeta infomation
 		List<IndexMeta> idxMetaList = this.indexMetaService
-				.initMiniCubeIndexMeta(cubeList, dataSourceInfo);
+				.initMiniCubeIndexMeta(cubeList, dataSourceInfoList);
 
 		if (idxMetaList.size() == 0) {
 			LOGGER.info(String.format(
 					LogInfoConstants.INFO_PATTERN_FUNCTION_PROCESS,
 					"initMiniCubeIndex", "[cubeList:" + cubeList
-							+ "][dataSourceInfo:" + dataSourceInfo
+							+ "][dataSourceInfoList:" + dataSourceInfoList
 							+ "][indexAsap:" + indexAsap + "][limited:"
 							+ limited + "]", "Init MiniCube IndexMeta failed"));
 			return false;
@@ -280,7 +280,7 @@ public class IndexServiceImpl implements IndexService {
 					LOGGER.error(String.format(
 							LogInfoConstants.INFO_PATTERN_FUNCTION_EXCEPTION,
 							"initMiniCubeIndex", "[cubeList:" + cubeList
-									+ "][dataSourceInfo:" + dataSourceInfo
+									+ "][dataSourceInfoList:" + dataSourceInfoList
 									+ "][indexAsap:" + indexAsap + "][limited:"
 									+ limited + "]"), e);
 					result=false;
@@ -295,7 +295,7 @@ public class IndexServiceImpl implements IndexService {
 		}
 		LOGGER.info(String.format(LogInfoConstants.INFO_PATTERN_FUNCTION_END,
 				"initMiniCubeIndex", "[cubeList:" + cubeList
-						+ "][dataSourceInfo:" + dataSourceInfo + "][indexAsap:"
+						+ "][dataSourceInfoList:" + dataSourceInfoList + "][indexAsap:"
 						+ indexAsap + "][limited:" + limited + "]"));
 		return result;
 	}
@@ -341,90 +341,90 @@ public class IndexServiceImpl implements IndexService {
 	}
 
 	@Override
-	public void updateIndexByDataSourceKey(String dataSourceKey, String[] factTableNames,
+	public void updateIndexByDataSourceKey(List<String> dataSourceKeyList, String[] factTableNames,
 			Map<String, Map<String, BigDecimal>> dataSetMap)
 			throws Exception {
 
 		LOGGER.info(String.format(LogInfoConstants.INFO_PATTERN_FUNCTION_BEGIN,
-				"updateIndexByDataSourceKey", dataSourceKey));
-		if (StringUtils.isEmpty(dataSourceKey)) {
+				"updateIndexByDataSourceKey", dataSourceKeyList));
+		if (CollectionUtils.isEmpty(dataSourceKeyList)) {
 			LOGGER.info(String.format(
 					LogInfoConstants.INFO_PATTERN_FUNCTION_EXCEPTION,
-					"updateIndexByDataSourceKey", dataSourceKey));
+					"updateIndexByDataSourceKey", dataSourceKeyList));
 			throw new IllegalArgumentException();
 		}
+		
+		for(String dataSourceKey:dataSourceKeyList){
+		    List<IndexMeta> metaList = new ArrayList<IndexMeta>();
+	        IndexAction idxAction = IndexAction.INDEX_INDEX;
 
-		List<IndexMeta> metaList = new ArrayList<IndexMeta>();
-		IndexAction idxAction = IndexAction.INDEX_INDEX;
+	        if (MapUtils.isEmpty(dataSetMap)) {
+	            if (!ArrayUtils.isEmpty(factTableNames)) {
+	                for (String factTableName : factTableNames) {
+	                    List<IndexMeta> fTableMetaList = this.indexMetaService
+	                            .getIndexMetasByFactTableName(factTableName,
+	                                    dataSourceKey);
+	                    if (!CollectionUtils.isEmpty(fTableMetaList)) {
+	                        metaList.addAll(fTableMetaList);
+	                    } else {
+	                        LOGGER.info(String.format(
+	                                LogInfoConstants.INFO_PATTERN_FUNCTION_PROCESS,
+	                                "updateIndexByDataSourceKey", dataSourceKey,
+	                                "can not find IndexMeta for Facttable:["
+	                                        + factTableNames + "]"));
+	                    }
+	                }
+	            } else {
+	                metaList = this.indexMetaService
+	                        .getIndexMetasByDataSourceKey(dataSourceKey);
+	            }
+	        } else {
+	            idxAction = IndexAction.INDEX_MOD;
+	            for (String factTableName : dataSetMap.keySet()) {
+	                List<IndexMeta> fTableMetaList = this.indexMetaService
+	                        .getIndexMetasByFactTableName(factTableName,
+	                                dataSourceKey);
+	                if (!CollectionUtils.isEmpty(fTableMetaList)) {
+	                    metaList.addAll(fTableMetaList);
+	                }
+	            }
 
-		if (MapUtils.isEmpty(dataSetMap)) {
-			if (!ArrayUtils.isEmpty(factTableNames)) {
-				for (String factTableName : factTableNames) {
-					List<IndexMeta> fTableMetaList = this.indexMetaService
-							.getIndexMetasByFactTableName(factTableName,
-									dataSourceKey);
-					if (!CollectionUtils.isEmpty(fTableMetaList)) {
-						metaList.addAll(fTableMetaList);
-					} else {
-						LOGGER.info(String.format(
-								LogInfoConstants.INFO_PATTERN_FUNCTION_PROCESS,
-								"updateIndexByDataSourceKey", dataSourceKey,
-								"can not find IndexMeta for Facttable:["
-										+ factTableNames + "]"));
-					}
-				}
-			} else {
-				metaList = this.indexMetaService
-						.getIndexMetasByDataSourceKey(dataSourceKey);
-			}
-		} else {
-			idxAction = IndexAction.INDEX_MOD;
-			for (String factTableName : dataSetMap.keySet()) {
-				List<IndexMeta> fTableMetaList = this.indexMetaService
-						.getIndexMetasByFactTableName(factTableName,
-								dataSourceKey);
-				if (!CollectionUtils.isEmpty(fTableMetaList)) {
-					metaList.addAll(fTableMetaList);
-				}
-			}
+	        }
 
+	        for (IndexMeta meta : metaList) {
+	            Map<String, BigDecimal> tableDataSetMap = null;
+	            if (!MapUtils.isEmpty(dataSetMap)) {
+	                tableDataSetMap = dataSetMap.get(meta.getFacttableName());
+	            }
+	            try {
+	                doIndex(meta, idxAction, tableDataSetMap);
+	            } catch (Exception e) {
+	                LOGGER.warn(String.format(
+	                        LogInfoConstants.INFO_PATTERN_FUNCTION_EXCEPTION,
+	                        "updateIndexByDataSourceKey",
+	                        "DataSourceKey:[" + dataSourceKey + "] FactTable:["
+	                                + meta.getFacttableName() + "] IndexMetaId:["
+	                                + meta.getIndexMetaId() + "]"),e);
+	                
+	                continue;
+	            }
+	        }
+	        
+	        try {
+	            publishIndexUpdateEvent(metaList);
+	        } catch (Exception e) {
+	            LOGGER.warn(String.format(
+	                    LogInfoConstants.INFO_PATTERN_FUNCTION_EXCEPTION,
+	                    "updateIndexByDataSourceKey", dataSourceKey),e);
+	            
+	            continue;
+	        }
+	        
 		}
-
-		for (IndexMeta meta : metaList) {
-			Map<String, BigDecimal> tableDataSetMap = null;
-			if (!MapUtils.isEmpty(dataSetMap)) {
-				tableDataSetMap = dataSetMap.get(meta.getFacttableName());
-			}
-			try {
-				doIndex(meta, idxAction, tableDataSetMap);
-			} catch (Exception e) {
-				LOGGER.warn(String.format(
-						LogInfoConstants.INFO_PATTERN_FUNCTION_EXCEPTION,
-						"updateIndexByDataSourceKey",
-						"DataSourceKey:[" + dataSourceKey + "] FactTable:["
-								+ meta.getFacttableName() + "] IndexMetaId:["
-								+ meta.getIndexMetaId() + "]"),e);
-				
-				throw e;
-			}finally {
-				
-			}
-		}
-		try {
-			publishIndexUpdateEvent(metaList);
-		} catch (Exception e) {
-			LOGGER.info(String.format(
-					LogInfoConstants.INFO_PATTERN_FUNCTION_EXCEPTION,
-					"updateIndexByDataSourceKey", dataSourceKey));
-			String message = TesseractExceptionUtils.getExceptionMessage(
-					IndexAndSearchException.INDEXEXCEPTION_MESSAGE,
-					IndexAndSearchExceptionType.INDEX_UPDATE_EXCEPTION);
-			throw new IndexAndSearchException(message, e.getCause(),
-					IndexAndSearchExceptionType.INDEX_EXCEPTION);
-		}
-
 		LOGGER.info(String.format(LogInfoConstants.INFO_PATTERN_FUNCTION_END,
-				"updateIndexByDataSourceKey", dataSourceKey));
+            "updateIndexByDataSourceKey", dataSourceKeyList));
+
+		
 	}
 	
 	

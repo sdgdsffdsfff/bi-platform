@@ -1,8 +1,11 @@
 package com.baidu.rigel.biplatform.ma.ds.service;
 
+import java.util.List;
+
 import com.baidu.rigel.biplatform.ac.query.data.DataSourceInfo;
 import com.baidu.rigel.biplatform.ma.ds.exception.DataSourceConnectionException;
 import com.baidu.rigel.biplatform.ma.model.ds.DataSourceDefine;
+import com.baidu.rigel.biplatform.ma.model.ds.DataSourceGroupDefine;
 
 /**
  * 数据源连接服务接口
@@ -52,4 +55,20 @@ public interface DataSourceConnectionService <T> {
 	 * @throws DataSourceConnectionException 数据连接异常
 	 */
 	public  DataSourceInfo parseToDataSourceInfo(DataSourceDefine ds, String securityKey) throws DataSourceConnectionException;
+	
+	
+    /**
+     * 获取此数据源组中，配置文件激活的数据源信息
+     *
+     * @param dataSourceGroupDefine
+     *            数据源组定义
+     * @return List<DataSourceInfo> 配置文件中配置的数据源信息
+     * @param securityKey
+     *            AES加密的密钥
+     * @throws DataSourceConnectionException
+     *             数据连接异常
+     */
+    public List<DataSourceInfo> getActivedDataSourceInfoList(
+            DataSourceGroupDefine dataSourceGroupDefine, String securityKey)
+            throws DataSourceConnectionException;
 }

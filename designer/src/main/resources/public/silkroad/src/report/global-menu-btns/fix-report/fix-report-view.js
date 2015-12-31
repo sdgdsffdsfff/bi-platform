@@ -68,6 +68,11 @@ define(
              * @public
              */
             getFixReportTaskMgrList: function (event) {
+                var savestate = window.dataInsight.main.canvas.savestate;
+                if (savestate === 0) {
+                    dialog.warning('您未进行保存，请先进行保存。');
+                    return;
+                }
                 var that = this;
 
                 // 如果画布中存在以下组件，就不能建立固定报表
@@ -132,7 +137,7 @@ define(
                 $btnOk.unbind();
                 $btnOk.click(function () {
                     var executeStrategy;
-                    var taskId = $('.j-fix-report-mgr .j-tas-id').attr('task-id');
+                    var taskId = $('.j-fix-report-mgr .j-task-id').attr('task-id');
                     var taskName = $('.j-fix-report-mgr .j-task-id').val();
                     taskName && (taskName = taskName.trim());
                     if (!taskName) {
@@ -142,16 +147,31 @@ define(
                     var isRunNow = $('.j-fix-report-mgr .j-isRunNow').is(':checked');
                     if (!isRunNow) {
                         // TODO:校验
-                        var hour = $('.j-fix-report-mgr .j-time-hour').val();
-                        hour && (hour = Number(hour.trim()));
-                        if (hour > 24) {
-                            dialog.alert('请输入合法的时间');
+                        var hour = $('.j-fix-report-mgr .j-time-hour').val().trim();
+                        var numHour;
+                        var numMinute;
+                        if (hour) {
+                            numHour = Number(hour);
+                            if (numHour > 24 || numHour < 0) {
+                                dialog.alert('请输入合法的时间');
+                                return;
+                            }
+                        }
+                        else {
+                            dialog.alert('小时不能为空');
                             return;
                         }
-                        var minute = $('.j-fix-report-mgr .j-time-minute').val();
-                        minute && (minute = Number(minute.trim()));
-                        if (minute > 60) {
-                            dialog.alert('请输入合法的时间');
+
+                        var minute = $('.j-fix-report-mgr .j-time-minute').val().trim();
+                        if (minute) {
+                            numMinute = Number(minute);
+                            if (numMinute > 60 || numMinute < 0) {
+                                dialog.alert('请输入合法的时间');
+                                return;
+                            }
+                        }
+                        else {
+                            dialog.alert('分钟不能为空');
                             return;
                         }
                         var granularity = $('.j-fix-report-mgr .j-granularity-parent').val();
@@ -220,9 +240,9 @@ define(
                 $taskStart.click(function () {
                     var $this = $(this);
                     if ($this.hasClass('j-task-start')) {
-                        var taskId = $this.parent().parent().attr('task-id');
-                        $this.removeClass('j-task-start task-start')
-                            .addClass('j-task-stop task-stop');
+                        var taskId = $this.parents('.task-item').attr('task-id');
+                        $this.removeClass('j-task-start biplt-start')
+                            .addClass('j-task-stop biplt-stop');
                         that.startTask(taskId, 0);
                     }
                     else {
@@ -234,7 +254,7 @@ define(
                 $taskDel.unbind();
                 $taskDel.click(function () {
                     var $this = $(this);
-                    var taskId = $this.parent().parent().attr('task-id');
+                    var taskId = $this.parents('.task-item').attr('task-id');
 
                     dialog.confirm('是否确定删除当前任务', function () {
                         that.delTask(taskId);
@@ -252,7 +272,7 @@ define(
                 $btnLook.unbind();
                 $btnLook.click(function () {
                     var $this = $(this);
-                    var taskId = $this.parent().parent().attr('task-id');
+                    var taskId = $this.parents('.task-item').attr('task-id');
                     that.getTaskInfo(taskId);
                 });
 

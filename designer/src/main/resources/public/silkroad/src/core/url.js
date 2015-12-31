@@ -944,6 +944,21 @@ define(function () {
     };
 
     /**
+     * 报表新建（编辑）- 表格编辑 - 获取跳转设置  列-表设置数据
+     * 删除表哥关联
+     *
+     * @param {string} reportId 报表id
+     * @param {string} compId 组件区域的id
+     * @param {string} linkId 关联Id
+     * @public
+     * @return {string} url
+     */
+    Url.delColumnLink = function (reportId, compId, linkId) {
+        return getExtendAreaBaseUrl(reportId, compId)
+            + '/olaplink/' + linkId;
+    };
+
+    /**
      * 报表新建（编辑）- 表格编辑 - 参数-表设置数据
      * 获取文本对齐相关信息
      *

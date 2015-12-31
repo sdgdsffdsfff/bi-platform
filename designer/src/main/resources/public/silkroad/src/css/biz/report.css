@@ -1131,24 +1131,41 @@
 .table-link-set {
     float: left;
     width: 410px;
-    height: 350px;
+    height: 400px;
 }
-.table-link-set .table-link-set-area {
+.table-link-set .table-link-set-area {}
+
+.table-link-set-area .table-link-set-area-dot {
+    float: left;
+    width: 100%;
+    height: 10px;
+    border-bottom: dotted 1px #000;
+}
+.table-link-set-area .table-link-set-part {
     float: left;
     margin-top: 10px;
     width: 100%;
+    min-height: 35px;
+    max-height: 200px;
+    overflow-y: auto;
 }
 .table-link-set-area > label {
+    float: left;
+    width: 100%;
+    margin-bottom: 10px;
+    font-weight: 700;
+    text-align: center;
+}
+.table-link-set-part > label {
     float: left;
     width: 100%;
     margin-bottom: 10px;
     font-weight: bold;
     text-align: center;
 }
-.table-link-set-area .table-link-set-area-items {
+.table-link-set-area .table-link-set-part-items1 {
     float: left;
     width: 100%;
-    height: 280px;
     overflow-y: auto;
 }
 .table-link-set-area .table-link-set-item {
@@ -1166,13 +1183,17 @@
     text-overflow: ellipsis;
     overflow: hidden;
 }
+.table-link-set-item > input {
+    float: left;
+    width: 28%;
+    line-height: 20px;
+    height: 20px;
+    margin-right: 5px;
+}
 .table-link-set-item .right {
     float: left;
-    width: 70%;
     line-height: 25px;
     height: 25px;
-}
-.table-link-set-item .w-p-40 {
     width: 40%;
 }
 
@@ -1211,7 +1232,7 @@
 .fix-report-content {
     max-width: 600px;
     margin: 0 auto;
-    max-height: 350px;
+    height: 350px;
     overflow-y: auto;
 }
 
@@ -1245,38 +1266,38 @@
 .fix-report-task-mgr-list tbody tr:hover {
     background: #f6f5f5;
 }
-.fix-report-mgr .radius {
-    height: 16px;
-    width: 16px;
-    border-radius: 50%;
-    background-color: #00a1cb;
-    overflow: hidden;
-    position: relative;
-    display: inline-block;
-}
-.fix-report-mgr .radius-red {
-    background-color: #e99586;
-}
+/*.fix-report-mgr .radius {*/
+    /*height: 16px;*/
+    /*width: 16px;*/
+    /*border-radius: 50%;*/
+    /*background-color: #00a1cb;*/
+    /*overflow: hidden;*/
+    /*position: relative;*/
+    /*display: inline-block;*/
+/*}*/
+/*.fix-report-mgr .radius-red {*/
+    /*background-color: #e99586;*/
+/*}*/
 
-.fix-report-mgr .normal {
-    height: 16px;
-    width: 16px;
-    position: relative;
-    overflow: hidden;
-    display: inline-block;
-}
-.fix-report-task-mgr-list .task-item .task-start {}
+/*.fix-report-mgr .normal {*/
+    /*height: 16px;*/
+    /*width: 16px;*/
+    /*position: relative;*/
+    /*overflow: hidden;*/
+    /*display: inline-block;*/
+/*}*/
+/*.fix-report-task-mgr-list .task-item .task-start {}*/
 
-.fix-report-task-mgr-list .task-item .task-start > span {
-    width: 0;
-    height: 0;
-    position: absolute;
-    left: 6px;
-    top: 4px;
-    border-style: solid;
-    border-color: transparent transparent transparent #fff;
-    border-width: 4px 4px 4px 7px;
-}
+/*.fix-report-task-mgr-list .task-item .task-start > span {*/
+    /*width: 0;*/
+    /*height: 0;*/
+    /*position: absolute;*/
+    /*left: 6px;*/
+    /*top: 4px;*/
+    /*border-style: solid;*/
+    /*border-color: transparent transparent transparent #fff;*/
+    /*border-width: 4px 4px 4px 7px;*/
+/*}*/
 .fix-report-task-mgr-list .task-item .list-url {
     color: #06c;
 }
@@ -1291,96 +1312,96 @@
     background: #fff;
 }
 
-.fix-report-task-mgr-list .task-item .task-look {}
+/*.fix-report-task-mgr-list .task-item .task-look {}*/
 
-.fix-report-task-mgr-list .task-item .task-look > span {
-    width: 0;
-    height: 0;
-    position: absolute;
-    left: 6px;
-    top: 4px;
-    border-style: solid;
-    border-color: transparent transparent transparent #fff;
-    border-width: 4px 4px 4px 7px;
-}
-.fix-report-mgr .task-add {}
+/*.fix-report-task-mgr-list .task-item .task-look > span {*/
+    /*width: 0;*/
+    /*height: 0;*/
+    /*position: absolute;*/
+    /*left: 6px;*/
+    /*top: 4px;*/
+    /*border-style: solid;*/
+    /*border-color: transparent transparent transparent #fff;*/
+    /*border-width: 4px 4px 4px 7px;*/
+/*}*/
+/*.fix-report-mgr .task-add {}*/
 
-.fix-report-mgr .task-add > span {
-    position: absolute;
-    width: 12px;
-    height: 4px;
-    background: #fff;
-    left: 2px;
-    top: 6px;
-}
-.fix-report-mgr .task-add > span:after {
-    content: "";
-    width: 4px;
-    height: 12px;
-    background: #fff;
-    position: absolute;
-    left: 4px;
-    top: -4px;
-}
+/*.fix-report-mgr .task-add > span {*/
+    /*position: absolute;*/
+    /*width: 12px;*/
+    /*height: 4px;*/
+    /*background: #fff;*/
+    /*left: 2px;*/
+    /*top: 6px;*/
+/*}*/
+/*.fix-report-mgr .task-add > span:after {*/
+    /*content: "";*/
+    /*width: 4px;*/
+    /*height: 12px;*/
+    /*background: #fff;*/
+    /*position: absolute;*/
+    /*left: 4px;*/
+    /*top: -4px;*/
+/*}*/
 
-.fix-report-task-mgr-list .task-item .task-del {}
+/*.fix-report-task-mgr-list .task-item .task-del {}*/
 
-.fix-report-task-mgr-list .task-item .task-del > span {
-    position: absolute;
-    width: 12px;
-    height: 4px;
-    top: 6px;
-    left: 2px;
-    background: #fff;
-    -webkit-transform: rotate(-45deg);
-       -moz-transform: rotate(-45deg);
-        -ms-transform: rotate(-45deg);
-         -o-transform: rotate(-45deg);
-            transform: rotate(-45deg);
-}
-.fix-report-task-mgr-list .task-item .task-del > span:after {
-    content: "";
-    width: 12px;
-    height: 4px;
-    background: #fff;
-    position: absolute;
-    top: 0;
-    left: 0;
-    -webkit-transform: rotate(90deg);
-       -moz-transform: rotate(90deg);
-        -ms-transform: rotate(90deg);
-         -o-transform: rotate(90deg);
-            transform: rotate(90deg);
-}
+/*.fix-report-task-mgr-list .task-item .task-del > span {*/
+    /*position: absolute;*/
+    /*width: 12px;*/
+    /*height: 4px;*/
+    /*top: 6px;*/
+    /*left: 2px;*/
+    /*background: #fff;*/
+    /*-webkit-transform: rotate(-45deg);*/
+       /*-moz-transform: rotate(-45deg);*/
+        /*-ms-transform: rotate(-45deg);*/
+         /*-o-transform: rotate(-45deg);*/
+            /*transform: rotate(-45deg);*/
+/*}*/
+/*.fix-report-task-mgr-list .task-item .task-del > span:after {*/
+    /*content: "";*/
+    /*width: 12px;*/
+    /*height: 4px;*/
+    /*background: #fff;*/
+    /*position: absolute;*/
+    /*top: 0;*/
+    /*left: 0;*/
+    /*-webkit-transform: rotate(90deg);*/
+       /*-moz-transform: rotate(90deg);*/
+        /*-ms-transform: rotate(90deg);*/
+         /*-o-transform: rotate(90deg);*/
+            /*transform: rotate(90deg);*/
+/*}*/
 
-.fix-report-task-mgr-list .task-item .task-look {}
+/*.fix-report-task-mgr-list .task-item .task-look {}*/
 
-.fix-report-task-mgr-list .task-item .task-look > span {
-    height: 7px;
-    width: 7px;
-    background: transparent;
-    -webkit-border-radius: 50px;
-       -moz-border-radius: 50px;
-            border-radius: 50px;
-    border: 2px solid #00a1cb;
-    position: absolute;
-    left: 0;
-    top: 0;
-}
-.fix-report-task-mgr-list .task-item .task-look > span:after {
-    content: "";
-    width: 4px;
-    height: 8px;
-    background: #00a1cb;
-    position: absolute;
-    top: 6px;
-    left: 7px;
-    -webkit-transform: rotate(-45deg);
-       -moz-transform: rotate(-45deg);
-        -ms-transform: rotate(-45deg);
-         -o-transform: rotate(-45deg);
-            transform: rotate(-45deg);
-}
+/*.fix-report-task-mgr-list .task-item .task-look > span {*/
+    /*height: 7px;*/
+    /*width: 7px;*/
+    /*background: transparent;*/
+    /*-webkit-border-radius: 50px;*/
+       /*-moz-border-radius: 50px;*/
+            /*border-radius: 50px;*/
+    /*border: 2px solid #00a1cb;*/
+    /*position: absolute;*/
+    /*left: 0;*/
+    /*top: 0;*/
+/*}*/
+/*.fix-report-task-mgr-list .task-item .task-look > span:after {*/
+    /*content: "";*/
+    /*width: 4px;*/
+    /*height: 8px;*/
+    /*background: #00a1cb;*/
+    /*position: absolute;*/
+    /*top: 6px;*/
+    /*left: 7px;*/
+    /*-webkit-transform: rotate(-45deg);*/
+       /*-moz-transform: rotate(-45deg);*/
+        /*-ms-transform: rotate(-45deg);*/
+         /*-o-transform: rotate(-45deg);*/
+            /*transform: rotate(-45deg);*/
+/*}*/
 
 .fix-report-mgr .box-add {
     margin: 10px 10px 0 0;

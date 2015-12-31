@@ -64,6 +64,7 @@ import com.baidu.rigel.biplatform.tesseract.qsservice.query.QueryContextBuilder;
 import com.baidu.rigel.biplatform.tesseract.qsservice.query.QueryContextSplitService.QueryContextSplitStrategy;
 import com.baidu.rigel.biplatform.tesseract.qsservice.query.QueryService;
 import com.baidu.rigel.biplatform.tesseract.qsservice.query.vo.QueryContext;
+import com.baidu.rigel.biplatform.tesseract.qsservice.query.vo.QueryRequest;
 import com.baidu.rigel.biplatform.tesseract.util.TesseractConstant;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
@@ -279,13 +280,13 @@ public class MetaQueryAction {
                         AnswerCoreConstant.GSON.fromJson(requestParams.get(MiniCubeConnection.SPLITSTRATEGY_PARAM_KEY),
                                 QueryContextSplitStrategy.class);
             }
-            LOG.info("query cost:" + (System.currentTimeMillis() - current) + " prepare to execute query.");
+            LOG.info("lijinquery cost:" + (System.currentTimeMillis() - current) + " prepare to execute query.");
             
             long beforeQuery = System.currentTimeMillis();
             
             DataModel dataModel = queryService.query(questionModel, queryContext, preSplitStrategy);
             
-            LOG.info("query cost:" + (System.currentTimeMillis() - beforeQuery) + " to execute query.");
+            LOG.info("lijinquery cost:" + (System.currentTimeMillis() - beforeQuery) + " to execute query.");
             
             long curr=System.currentTimeMillis();
             if (dataModel != null) {
@@ -299,7 +300,7 @@ public class MetaQueryAction {
                 LOG.info("query cost:" + (System.currentTimeMillis() - curr) + "ms sortAandTrunc.");
             }
             
-            LOG.info("query cost:" + (System.currentTimeMillis() - current) + " success to execute query.");
+            LOG.info("lijinquery cost:" + (System.currentTimeMillis() - current) + " success to execute query.");
             curr = System.currentTimeMillis();
             ResponseResult rs = ResponseResultUtils.getCorrectResult("query success.",
                     AnswerCoreConstant.GSON.toJson(dataModel));
@@ -317,6 +318,57 @@ public class MetaQueryAction {
             e.printStackTrace();
             errorMsg = "unexpected error:" + e.getMessage();
         } 
+        LOG.error("cost:" + (System.currentTimeMillis() - current) + " error,errorMsg:" + errorMsg);
+        // 走到这里说明已经出错了，状态码暂时设为100，后续加个状态码表
+        return ResponseResultUtils.getErrorResult(errorMsg, 100);
+    }
+    
+    @RequestMapping(value = "/queryIndex", method = RequestMethod.POST)
+    public ResponseResult queryIndex(@RequestBody String requestJson) {
+        long current = System.currentTimeMillis();
+        // 将请求信息全部JSON化，需要
+        if (StringUtils.isBlank(requestJson)) {
+            return ResponseResultUtils.getErrorResult("get members question is null", 100);
+        }
+        String errorMsg = null;
+        try {
+            Map<String, String> requestParams = parseRequestJson(requestJson);
+            
+            ConfigQuestionModel questionModel = AnswerCoreConstant.GSON.fromJson(
+                    requestParams.get(MiniCubeConnection.QUESTIONMODEL_PARAM_KEY),
+                    ConfigQuestionModel.class);
+            String queryId = questionModel.getQueryId();
+            QueryContext queryContext = AnswerCoreConstant.GSON.fromJson(
+                    requestParams.get(MiniCubeConnection.QUERYCONTEXT_PARAM_KEY),
+                    QueryContext.class);
+            long beforeQuery = System.currentTimeMillis();
+            
+            DataModel dataModel = queryService.queryIndex(questionModel, queryContext);
+            
+            LOG.info("lijinquery cost:" + (System.currentTimeMillis() - beforeQuery)
+                    + " to execute query.");
+            
+            long curr = System.currentTimeMillis();
+
+            LOG.info("lijinquery cost:" + (System.currentTimeMillis() - current)
+                    + " success to execute query.");
+            curr = System.currentTimeMillis();
+            ResponseResult rs = ResponseResultUtils.getCorrectResult("query success.",
+                    AnswerCoreConstant.GSON.toJson(dataModel));
+            LOG.info("query queryId:{} cost:{} ms convert dataModel to json", queryId,
+                    System.currentTimeMillis() - curr);
+            return rs;
+        } catch (JsonSyntaxException e) {
+            e.printStackTrace();
+            // 一般不会出现，出现了说明模型有问题了
+            errorMsg = "json syntax exception:" + e.getMessage();
+        } catch (MiniCubeQueryException e) {
+            e.printStackTrace();
+            errorMsg = "query error:" + e.getMessage();
+        } catch (Exception e) {
+            e.printStackTrace();
+            errorMsg = "unexpected error:" + e.getMessage();
+        }
         LOG.error("cost:" + (System.currentTimeMillis() - current) + " error,errorMsg:" + errorMsg);
         // 走到这里说明已经出错了，状态码暂时设为100，后续加个状态码表
         return ResponseResultUtils.getErrorResult(errorMsg, 100);
@@ -353,8 +405,10 @@ public class MetaQueryAction {
             String dataSourceJson = requestParams.get(MiniCubeConnection.DATASOURCEINFO_PARAM_KEY);
             List<Cube> cubes = AnswerCoreConstant.GSON.fromJson(listCubeJson, new TypeToken<List<Cube>>() {
                 }.getType());
-            DataSourceInfo dataSourceInfo = AnswerCoreConstant.GSON.fromJson(dataSourceJson, DataSourceInfo.class);
-            metaDataService.publish(cubes, dataSourceInfo);
+            List<DataSourceInfo> dataSourceInfoList = AnswerCoreConstant.GSON.fromJson(
+                    dataSourceJson, new TypeToken<List<DataSourceInfo>>() {
+                    }.getType());
+            metaDataService.publish(cubes, dataSourceInfoList);
             return ResponseResultUtils.getCorrectResult("success", "public cubes success.");
         } catch (JsonSyntaxException e) {
             e.printStackTrace();
@@ -435,9 +489,12 @@ public class MetaQueryAction {
             String paramsJason=requestParams.get(MiniCubeConnection.PARAMS);
             
             Map<String,Map<String,BigDecimal>> params=AnswerCoreConstant.GSON.fromJson(paramsJason,new TypeToken<Map<String,Map<String,BigDecimal>>>() {}.getType());
-            DataSourceInfo dataSourceInfo = AnswerCoreConstant.GSON.fromJson(dataSourceJson, DataSourceInfo.class);
+//            DataSourceInfo dataSourceInfo = AnswerCoreConstant.GSON.fromJson(dataSourceJson, DataSourceInfo.class);
+            List<DataSourceInfo> dataSourceInfoList = AnswerCoreConstant.GSON.fromJson(
+                    dataSourceJson, new TypeToken<List<DataSourceInfo>>() {
+                    }.getType());
             
-            metaDataService.refresh(dataSourceInfo, dataSetString,params);
+            metaDataService.refresh(dataSourceInfoList, dataSetString, params);
             
             return ResponseResultUtils.getCorrectResult("success", "refresh success.");
         } catch (JsonSyntaxException e) {
@@ -454,6 +511,35 @@ public class MetaQueryAction {
         // 走到这里说明已经出错了，状态码暂时设为100，后续加个状态码表
         return ResponseResultUtils.getErrorResult(errorMsg, 100);
 
+    }
+    
+    @RequestMapping(value = "/hasindex", method = RequestMethod.POST)
+    @ResponseBody
+    public ResponseResult hasIndex(@RequestBody String requestJson) {
+        // 将请求信息全部JSON化，需要
+        String errorMsg = null;
+        try {
+            if (StringUtils.isBlank(requestJson)) {
+                return ResponseResultUtils.getErrorResult("hasIndex request is null", 100);
+            }
+            
+            Map<String, String> requestParams = parseRequestJson(requestJson);
+            
+            QueryRequest query = AnswerCoreConstant.GSON.fromJson(
+                    requestParams.get(MiniCubeConnection.QUERYREQUEST_PARAM_KEY), QueryRequest.class); 
+            
+            return ResponseResultUtils.getCorrectResult("success", this.queryService.hasIndex(query));
+        } catch (JsonSyntaxException e) {
+            e.printStackTrace();
+            errorMsg = "json parse error," + e.getMessage();
+        } catch (Exception e) {
+            e.printStackTrace();
+            errorMsg = "unexpected error:" + e.getMessage();
+        }
+        
+        // 走到这里说明已经出错了，状态码暂时设为100，后续加个状态码表
+        return ResponseResultUtils.getErrorResult(errorMsg, 100);
+        
     }
 
     /**

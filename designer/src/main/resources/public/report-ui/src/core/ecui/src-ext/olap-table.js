@@ -852,7 +852,7 @@
         if (wrap.indent) {
             // margin-left会用来判断indent的点击事件，所以结构不能变
             attrStr.push('data-indent="' + wrap.indent + '"');
-            indentStyle = 'margin-left:' + (parseInt(TREE_INDENT * wrap.indent) - 15) + 'px;';
+            indentStyle = 'margin-left:' + parseInt(TREE_INDENT * wrap.indent, 10) + 'px;';
         }
 
         if (wrap.drillByLink) {
@@ -861,14 +861,25 @@
         }
         // 增加判断逻辑，如果改行是手动汇总行，那么linkBridge也不能有点击，否则后台没法处理
 //        else if (defItem && defItem.linkBridge && wrap.cellId && wrap.cellId.indexOf('[SUMMARY_NODE].[ALL]') < 0) {
-        else if (value !== '-' && defItem && defItem.linkBridge) {
+        else if ((value + '').indexOf('-') === -1 && defItem && defItem.linkBridge && !defItem.format) {
             attrStr.push('data-cell-link="true"');
+            value = value.split(',');
             // value = '<a href="#" class="' + type + '-cell-link" data-cell-link-bridge-a="1">' + value + '</a>';
-            value = [
-                '<a href="#" class="', type, '-cell-link" data-cell-link-bridge-a="1">',
-                    value,
-                '</a>'
-            ].join('');
+            var str = [];
+            for (var i = 0; i < value.length; i ++) {
+                str.push(
+                    [
+                        '<a href="#" class="', type, '-cell-link" data-cell-link-bridge-a="', i, '">',
+                        value[i],
+                        '</a>'
+                    ].join('')
+                );
+            }
+            value = str.join('&nbsp;&nbsp;');
+        }
+        else if ((value + '').indexOf('-') === -1 && defItem && defItem.linkBridge && defItem.format) {
+            attrStr.push('data-cell-link="true"');
+            value = '<a href="#" class="' + type + '-cell-link" data-cell-link-bridge-a="0">' + value + '</a>';
         }
 
         // 条件格式
@@ -987,12 +998,13 @@
                     else if (aEl.getAttribute('data-cell-link-bridge-a')) {
                         aEl.onclick = (function(colDefItem, rowDefItem) {
                             return function() {
+                                var index = this.getAttribute('data-cell-link-bridge-a');
                                 !me._bDisabled
                                 && triggerEvent(
                                     me,
                                     'celllinkbridge',
                                     null,
-                                    [colDefItem, rowDefItem]
+                                    [colDefItem, rowDefItem, index]
                                 );
                                 return false;
                             }

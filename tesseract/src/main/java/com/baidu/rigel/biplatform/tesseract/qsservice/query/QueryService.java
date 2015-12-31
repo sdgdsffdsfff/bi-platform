@@ -20,6 +20,7 @@ import com.baidu.rigel.biplatform.ac.query.data.DataModel;
 import com.baidu.rigel.biplatform.ac.query.model.QuestionModel;
 import com.baidu.rigel.biplatform.tesseract.qsservice.query.QueryContextSplitService.QueryContextSplitStrategy;
 import com.baidu.rigel.biplatform.tesseract.qsservice.query.vo.QueryContext;
+import com.baidu.rigel.biplatform.tesseract.qsservice.query.vo.QueryRequest;
 
 /**
  * 结果集查询服务接口
@@ -39,5 +40,20 @@ public interface QueryService {
      */
     DataModel query(QuestionModel questionModel, QueryContext queryContext, QueryContextSplitStrategy preSplitStrategy)
             throws MiniCubeQueryException;
+    
+    /**
+     * 给一个问题模型，返回groupby后的Index数据结果
+     * 
+     * @param questionModel 问题模型
+     * @param queryContext 查询上下文
+     * @return 结果
+     */
+    DataModel queryIndex(QuestionModel questionModel, QueryContext queryContext)throws MiniCubeQueryException;
 
+    /**
+     * 判断当前query是否可以使用索引
+     * @param query
+     * @return boolean
+     */
+    boolean hasIndex(QueryRequest query);
 }

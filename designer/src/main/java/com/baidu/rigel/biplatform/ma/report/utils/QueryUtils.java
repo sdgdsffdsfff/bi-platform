@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.servlet.http.Cookie;
@@ -35,6 +36,7 @@ import com.baidu.rigel.biplatform.ac.minicube.DivideTableStrategyVo;
 import com.baidu.rigel.biplatform.ac.minicube.ExtendMinicubeMeasure;
 import com.baidu.rigel.biplatform.ac.minicube.MiniCube;
 import com.baidu.rigel.biplatform.ac.minicube.MiniCubeDimension;
+import com.baidu.rigel.biplatform.ac.minicube.MiniCubeMeasure;
 import com.baidu.rigel.biplatform.ac.minicube.MiniCubeMember;
 import com.baidu.rigel.biplatform.ac.minicube.MiniCubeSchema;
 import com.baidu.rigel.biplatform.ac.minicube.StandardDimension;
@@ -103,6 +105,8 @@ import com.google.common.collect.Sets;
 public class QueryUtils {
   
     private static final Logger LOG = LoggerFactory.getLogger (QueryUtils.class);
+    
+    private static final String NEED_SUMMARY = "needSummary";
     /**
      * 构造函数
      */
@@ -144,6 +148,10 @@ public class QueryUtils {
         if (area.getType() == ExtendAreaType.PLANE_TABLE) {
             cube = transformCube(cube);          
             MiniCube miniCube = (MiniCube) cube;
+            for (Entry<String, Measure> entry : miniCube.getMeasures().entrySet()) {
+                MiniCubeMeasure m = (MiniCubeMeasure) entry.getValue();
+                m.setAggregator(Aggregator.NONE);
+            }
             DivideTableStrategyVo divideVo = miniCube.getDivideTableStrategyVo();
             DivideTableContext divideContext = new DivideTableContext();
             DivideTableService divideTableService = null;
@@ -211,6 +219,9 @@ public class QueryUtils {
             // TODO 需要开发通用工具包 将常量定义到通用工具包中
             questionModel.getRequestParams().put("NEED_OTHERS", "1");
         }
+        if(queryAction.isChartQuery()){
+            questionModel.getRequestParams().put("isChartQuery", "true");
+        }
      // 设置请求参数信息
         if (requestParams != null) {
             for (String key : requestParams.keySet()) {
@@ -241,20 +252,28 @@ public class QueryUtils {
             Map<String, MetaCondition> conditionsForPivotTable = 
                 QueryConditionUtils.buildQueryConditionsForPivotTable(reportModel, area, queryAction);
             questionModel.setQueryConditions(conditionsForPivotTable);        
-            if (queryAction.getDrillDimValues() == null 
-                    || !queryAction.getDrillDimValues().isEmpty() 
+            if (queryAction.getDrillDimValues() == null || !queryAction.getDrillDimValues().isEmpty()
                     || queryAction.isChartQuery()) {
                 questionModel.setNeedSummary(false);
             } else {
-                ExtendAreaType areaType = reportModel.getExtendById (queryAction.getExtendAreaId ()).getType ();
-                if (areaType != ExtendAreaType.TABLE) {
-                    questionModel.setNeedSummary (false);
+                ExtendAreaType areaType = reportModel.getExtendById(queryAction.getExtendAreaId()).getType();
+                if (areaType != ExtendAreaType.TABLE && areaType != ExtendAreaType.LITEOLAP_TABLE) {
+                    questionModel.setNeedSummary(false);
                 } else {
-                    questionModel.setNeedSummary(needSummary(questionModel));
+                    String needSummaryConfigValue = "";
+                    // 如果是liteolap表格，则需要取到其引用的父model的area区域对象才能取到相关other配置
+                    if (areaType == ExtendAreaType.LITEOLAP_TABLE) {
+                        needSummaryConfigValue =
+                                String.valueOf(reportModel.getExtendById(area.getReferenceAreaId()).getOtherSetting()
+                                        .get(NEED_SUMMARY));
+                    } else {
+                        needSummaryConfigValue = String.valueOf(area.getOtherSetting().get(NEED_SUMMARY));
+                    }
+                    questionModel.setNeedSummary(needSummaryWhitConfigValue(questionModel, needSummaryConfigValue));
                 }
-            } 
+            }
             
-            if (questionModel.isNeedSummary() && "false".equals(area.getOtherSetting().get("needSummary"))) {
+            if (questionModel.isNeedSummary() && "false".equals(area.getOtherSetting().get(NEED_SUMMARY))) {
                 questionModel.setNeedSummary (false);
             }
         }
@@ -266,6 +285,20 @@ public class QueryUtils {
         return questionModel;
     }
 
+    /**
+     * 如果之前存了了有配置信息，则直接取配置的值即可，若无相关配置，则走原来的判断逻辑
+     * 
+     * @param questionModel questionModel
+     * @param needSummaryConfigValue 有关配置的值
+     * @return 返回是否需要合计行标识
+     */
+    private static boolean needSummaryWhitConfigValue(QuestionModel questionModel, String needSummaryConfigValue) {
+        if (StringUtils.hasLength(needSummaryConfigValue)) {
+            return Boolean.valueOf(needSummaryConfigValue);
+        } else {
+            return needSummary(questionModel);
+        }
+    }
     /**
      * 判断是否需要汇总
      * @param questionModel
@@ -395,8 +428,16 @@ public class QueryUtils {
             }
             if (olapElement instanceof Dimension) {
                 meta.getCrossjoinDims().add(olapElement.getName());
+                // 针对列上的各个查询字段，保证其查询顺序，该字段仅供平面表查询使用
+                if (AxisType.COLUMN.equals(axisType)) {
+                    meta.getQueryItemsOrder().add("[Dimension].[" + olapElement.getName() + "]");
+                }
             } else {
                 meta.getQueryMeasures().add(olapElement.getName());
+                // 针对列上的各个查询字段，保证其查询顺序，该字段仅供平面表查询使用
+                if (AxisType.COLUMN.equals(axisType)) {
+                    meta.getQueryItemsOrder().add("[Measure].[" + olapElement.getName() + "]");
+                }
             }
         }
         return meta;
@@ -486,34 +527,54 @@ public class QueryUtils {
                 dimensions.put(dim.getName(), dim);
             }
         }
-        if (area.getType() == ExtendAreaType.LITEOLAP) {
+        if (area.getType() == ExtendAreaType.LITEOLAP || area.getType() == ExtendAreaType.LITEOLAP_CHART
+                || area.getType() == ExtendAreaType.LITEOLAP_TABLE) {
             /**
              * TODO 把liteOlap中候选的维度和指标加入到items里面
              */
-            Map<String, Item> candDims = ((LiteOlapExtendArea) area).getCandDims();
+            Map<String, Item> candDims = Maps.newHashMap();
+            if (area.getType() == ExtendAreaType.LITEOLAP) {
+                candDims = ((LiteOlapExtendArea) area).getCandDims();
+            } else {
+                LiteOlapExtendArea liteOlapArea = 
+                        (LiteOlapExtendArea) reportModel.getExtendById(area.getReferenceAreaId());
+                candDims = liteOlapArea.getCandDims();
+            }
+            
             Schema schema = reportModel.getSchema();
             String cubeId = area.getCubeId();
             for (String elementId : candDims.keySet()) {
                 OlapElement element = ReportDesignModelUtils.getDimOrIndDefineWithId(schema, cubeId, elementId);
-                MiniCubeDimension dim = (MiniCubeDimension) DeepcopyUtils.deepCopy(element);
-                dim.setLevels(Maps.newLinkedHashMap());
-                ((Dimension) element).getLevels().values().forEach(level -> {
-                    level.setDimension(dim);
-                    dim.getLevels().put(level.getName(), level);
-                });
-                dimensions.put(element.getName(), (Dimension) element);
+                if (element != null && !dimensions.containsKey(element.getName())) {
+                    MiniCubeDimension dim = (MiniCubeDimension) DeepcopyUtils.deepCopy(element);
+                    dim.setLevels(Maps.newLinkedHashMap());
+                    ((Dimension) element).getLevels().values().forEach(level -> {
+                        level.setDimension(dim);
+                        dim.getLevels().put(level.getName(), level);
+                    });
+                    dimensions.put(element.getName(), (Dimension) element);
+                }
             }
-            Map<String, Item> candInds = ((LiteOlapExtendArea) area).getCandInds();
+            Map<String, Item> candInds = Maps.newHashMap();
+            if (area.getType() == ExtendAreaType.LITEOLAP) {
+                candInds = ((LiteOlapExtendArea) area).getCandInds();
+            } else {
+                LiteOlapExtendArea liteOlapArea = 
+                        (LiteOlapExtendArea) reportModel.getExtendById(area.getReferenceAreaId());
+                candInds = liteOlapArea.getCandInds();
+            }
             for (String elementId : candInds.keySet()) {
                 OlapElement element = ReportDesignModelUtils.getDimOrIndDefineWithId(schema, cubeId, elementId);
-                if (element instanceof CallbackMeasure) {
-                    CallbackMeasure m = DeepcopyUtils.deepCopy((CallbackMeasure) element);
-                    String url = ((CallbackMeasure) element).getCallbackUrl();
-                    m.setCallbackUrl(HttpUrlUtils.getBaseUrl(url));
-                    m.setCallbackParams(HttpUrlUtils.getParams(url));
-                    measures.put(m.getName(), m);
-                } else {
-                    measures.put(element.getName(), (Measure) element);
+                if (element != null && !measures.containsKey(element.getName())) {
+                    if (element instanceof CallbackMeasure) {
+                        CallbackMeasure m = DeepcopyUtils.deepCopy((CallbackMeasure) element);
+                        String url = ((CallbackMeasure) element).getCallbackUrl();
+                        m.setCallbackUrl(HttpUrlUtils.getBaseUrl(url));
+                        m.setCallbackParams(HttpUrlUtils.getParams(url));
+                        measures.put(m.getName(), m);
+                    } else {
+                        measures.put(element.getName(), (Measure) element);
+                    }
                 }
             }
         }

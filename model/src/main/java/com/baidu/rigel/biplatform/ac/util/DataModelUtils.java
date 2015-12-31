@@ -634,6 +634,26 @@ public class DataModelUtils {
     }
     
     /**
+     * isChar
+     *
+     * @param dateType
+     * @return
+     */
+    public static boolean isChar(String dateType) {
+        // 目前只日志mysql协议，没有对其他数据源类型兼容
+        if (StringUtils.isEmpty(dateType) 
+                || dateType.toLowerCase().contains("char")
+                || dateType.toLowerCase().contains("time")
+                || dateType.toLowerCase().contains("text")
+                || dateType.toLowerCase().contains("date")
+                || dateType.toLowerCase().contains("blob")) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    
+    /**
      * 
      * @author david.wang
      *

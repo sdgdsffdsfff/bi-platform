@@ -6,6 +6,9 @@ import java.util.Map;
 
 import javax.annotation.Resource;
 
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -31,6 +34,7 @@ import com.baidu.rigel.biplatform.ma.report.query.QueryAction;
 import com.baidu.rigel.biplatform.ma.report.query.ReportRuntimeModel;
 import com.baidu.rigel.biplatform.ma.report.query.ResultSet;
 import com.baidu.rigel.biplatform.ma.report.query.chart.DIReportChart;
+import com.baidu.rigel.biplatform.ma.report.query.chart.SeriesDataUnit;
 import com.baidu.rigel.biplatform.ma.report.query.chart.SeriesInputInfo.SeriesUnitType;
 import com.baidu.rigel.biplatform.ma.report.query.pivottable.BaseTable;
 import com.baidu.rigel.biplatform.ma.report.query.pivottable.PivotTable;
@@ -55,7 +59,7 @@ import com.google.common.collect.Maps;
 public class QueryDataResourceUtils {
 
     /**
-     * 日志对象
+     * 日志对象f
      */
     private static final Logger LOG = LoggerFactory
             .getLogger(QueryDataResourceUtils.class);    
@@ -81,7 +85,7 @@ public class QueryDataResourceUtils {
      * @return
      */
     public ResponseResult parseQueryResultToResponseResult(ReportRuntimeModel runtimeModel, ExtendArea targetArea,
-            ResultSet result, ExtendAreaContext areaContext, QueryAction action ) {
+            ResultSet result, ExtendAreaContext areaContext, QueryAction action) {
         BaseTable baseTable = null;
         ReportDesignModel designModel = runtimeModel.getModel();
 
@@ -150,9 +154,8 @@ public class QueryDataResourceUtils {
         Map<String, Object> resultMap = Maps.newHashMap();
         ReportDesignModel reportDesignModel = runtimeModel.getModel();
         if (targetArea.getType() == ExtendAreaType.TABLE || targetArea.getType() == ExtendAreaType.LITEOLAP_TABLE) {
-            Map<String, Object> otherSetting = targetArea.getOtherSetting();
-            boolean isShowZero = DataModelUtils.isShowZero(otherSetting);
-            DataModelUtils.decorateTable(formatModel, pivotTable, isShowZero);
+
+            DataModelUtils.decorateTable(formatModel, pivotTable, targetArea, reportDesignModel);
             /**
              * 每次查询以后，清除选中行，设置新的
              */
@@ -181,29 +184,31 @@ public class QueryDataResourceUtils {
             if (targetArea.getType () == ExtendAreaType.LITEOLAP_TABLE) {
                 logicModel = reportDesignModel.getExtendAreas ().get (targetArea.getReferenceAreaId ()).getLogicModel ();
             }
-            if (logicModel.getRows ().length >= 2) {
-                Map<String, String> root =  genRootDimCaption(pivotTable, logicModel, 
-                        areaContext.getParams(), cube);
-                List<Map<String, String>> tmp = Lists.newArrayList ();
-                tmp.add (root);
+            if (logicModel.getRows().length >= 2) {
+                if (CollectionUtils.isEmpty(areaContext.getCurBreadCrumPath())) {
+                    Map<String, String> root = genRootDimCaption(pivotTable, logicModel, areaContext.getParams(), cube);
+                    List<Map<String, String>> tmp = Lists.newArrayList();
+                    tmp.add(root);
                     areaContext.setCurBreadCrumPath(tmp);
-    //                    resultMap.put("mainDimNodes", dims);
-                        // 在运行时上下文保存当前区域的根节点名称 方便面包屑展示路径love
+                    // resultMap.put("mainDimNodes", dims);
+                    // 在运行时上下文保存当前区域的根节点名称 方便面包屑展示路径love
                     if (!root.get("uniqName").toLowerCase().contains("all")) {
-                        root.put("uniqName", this.genRootUniqueName (root.get("uniqName")));
+                        root.put("uniqName", this.genRootUniqueName(root.get("uniqName")));
                         root.put("showName", "全部");
-    //                        runTimeModel.getContext().put(vertualDimKey, action);
+                        // runTimeModel.getContext().put(vertualDimKey, action);
                     }
                     mainDims.add(root);
                     Collections.reverse(mainDims);
                     areaContext.setCurBreadCrumPath(mainDims);
                     resultMap.put("mainDimNodes", mainDims);
                 } else {
-                    areaContext.setCurBreadCrumPath (Lists.newArrayList ());
-                    resultMap.remove ("mainDimNodes");
-//                    resultMap.put("mainDimNodes", areaContext.getCurBreadCrumPath ());
+                    areaContext.setCurBreadCrumPath(areaContext.getCurBreadCrumPath());
+                    resultMap.put("mainDimNodes", areaContext.getCurBreadCrumPath());
+//                    resultMap.remove("mainDimNodes");
+                    // resultMap.put("mainDimNodes", areaContext.getCurBreadCrumPath ());
                 }
-//            runTimeModel.getContext().put(areaId, root);
+                // runTimeModel.getContext().put(areaId, root);
+            } 
         } else if (targetArea.getType() == ExtendAreaType.CHART 
                 || targetArea.getType() == ExtendAreaType.LITEOLAP_CHART) {
             DIReportChart chart = null;
@@ -213,9 +218,22 @@ public class QueryDataResourceUtils {
                 OlapElement element = ReportDesignModelUtils.getDimOrIndDefineWithId(reportDesignModel.getSchema(),
                         targetArea.getCubeId(), item.getOlapElementId());
                 if (element instanceof TimeDimension) {
-                    chart = chartBuildService.parseToChart(pivotTable, chartType, true);
+                    if (targetArea.getType() == ExtendAreaType.LITEOLAP_CHART) {
+                        chart = chartBuildService.parseToLiteOlapChart(pivotTable, chartType, true, areaContext.getParams());
+                    } else {
+                        chart = chartBuildService.parseToChart(pivotTable, chartType, true);
+                    }
                 } else {
                     chart = chartBuildService.parseToChart(pivotTable, chartType, false);
+                }
+                
+                if (CollectionUtils.isNotEmpty(chart.getSeriesData())
+                        && MapUtils.isNotEmpty(areaContext.getParams())
+                        && areaContext.getParams().get("displayName") != null) {
+                    // 如果前端有设置，传入displayName，那么显示前端传入的图例信息
+                    SeriesDataUnit seriesDataUnit = chart.getSeriesData().get(0);
+                    seriesDataUnit.setName(areaContext.getParams().get("displayName").toString()
+                            + "-" + seriesDataUnit.getName());
                 }
             } else {
                 chart = chartBuildService.parseToChart(pivotTable, chartType, false);
@@ -241,11 +259,26 @@ public class QueryDataResourceUtils {
         Item item = logicModel.getRows ()[0];
         Map<String, String> root = Maps.newHashMap();
         if (params.containsKey (item.getOlapElementId ())) {
-            String uniqueName = params.get (item.getOlapElementId ()).toString ();
             Dimension dim = cube.getDimensions ().get (item.getOlapElementId ());
-            // for callback
-            if (!MetaNameUtil.isUniqueName (uniqueName) && dim.getType () == DimensionType.CALLBACK) {
-                uniqueName = "[" + dim.getName () + "].[" + uniqueName + "]";
+            Object obj = params.get(item.getOlapElementId());
+            String uniqueName = "";
+            if (obj instanceof String[]) {
+                // 如果是多选
+                String[] uniqueNames = (String[]) obj;
+                for (int i = 0; i < uniqueNames.length; i++) {
+                    // for callback
+                    if (!MetaNameUtil.isUniqueName(uniqueNames[i])) {
+                        uniqueNames[i] = "[" + dim.getName() + "].[" + uniqueNames[i] + "]";
+                    }
+                }
+                uniqueName = StringUtils.join(uniqueNames, ",");
+            } else {
+                // 如果是单选
+                uniqueName = (String) obj;
+                // for callback
+                if (!MetaNameUtil.isUniqueName(uniqueName)) {
+                    uniqueName = "[" + dim.getName() + "].[" + uniqueName + "]";
+                }
             }
             root.put("uniqName", genRootUniqueName (uniqueName));
         } else {

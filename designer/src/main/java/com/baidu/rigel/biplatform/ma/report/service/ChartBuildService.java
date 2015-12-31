@@ -35,4 +35,15 @@ public interface ChartBuildService {
      * @return
      */
     DIReportChart parseToChart(PivotTable tableResult, Map<String, String> chartType, boolean isTimeChart);
+    
+    /**
+     * 针对lite-olap的chart做特殊转换
+     * @param tableResult
+     * @param chartType
+     * @param isTimeChart
+     * @param context
+     * @return
+     */
+    DIReportChart parseToLiteOlapChart(PivotTable tableResult, Map<String, String> chartType, boolean isTimeChart, 
+            Map<String, Object> context);
 }

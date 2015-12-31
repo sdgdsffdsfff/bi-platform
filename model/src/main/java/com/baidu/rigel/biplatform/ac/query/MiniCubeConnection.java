@@ -60,6 +60,11 @@ public interface MiniCubeConnection {
      * QUESTIONMODEL_PARAM_KEY
      */
     String QUESTIONMODEL_PARAM_KEY = "question";
+    
+    /**
+     * QUERYREQUEST_PARAM_KEY
+     */
+    String QUERYREQUEST_PARAM_KEY="query";
 
     /**
      * QUERYCONTEXT_PARAM_KEY
@@ -84,8 +89,7 @@ public interface MiniCubeConnection {
     /**
      * CUBE_PARAM_KEY
      */
-    String CUBE_PARAM_KEY = "cube";
-    
+    String CUBE_PARAM_KEY = "cube";    
     
     /** 
      * DATASET_PARAM_KEY
@@ -110,12 +114,12 @@ public interface MiniCubeConnection {
      * 发布模型接口
      * 
      * @param cubes 发布的模型列表
-     * @param dataSourceInfo 模型对应的数据源信息
+     * @param dataSourceInfo List 模型对应的数据源列表信息
      * @return 发布是否成功
      */
-    default boolean publishCubes(List<Cube> cubes, DataSourceInfo dataSourceInfo) {
+    default boolean publishCubes(List<Cube> cubes, List<DataSourceInfo> dataSourceInfoList) {
         Map<String, String> params = new HashMap<String, String>(5);
-        params.put(DATASOURCEINFO_PARAM_KEY, AnswerCoreConstant.GSON.toJson(dataSourceInfo));
+        params.put(DATASOURCEINFO_PARAM_KEY, AnswerCoreConstant.GSON.toJson(dataSourceInfoList));
         params.put(CUBE_PARAM_KEY, AnswerCoreConstant.GSON.toJson(cubes));
 
         String responseJson = HttpRequest.sendPost(ConfigInfoUtils.getServerAddress() + "/publish", params);
@@ -144,7 +148,8 @@ public interface MiniCubeConnection {
         FILE(2), // not implement
         HIVE(4),
         CUSTOM(3), // user custom datasource,support user custom data process
-        PALO(6); // palo
+        PALO(6), // palo
+        DRUID(7); // Druid
         /**
          * id ID
          */
@@ -181,9 +186,9 @@ public interface MiniCubeConnection {
             /**
          * 刷新当前connection的缓存
          */
-        public static boolean refresh(DataSourceInfo dataSourceInfo, String[] dataSets, String conditions) {
+        public static boolean refresh(List<DataSourceInfo> dataSourceInfoList, String[] dataSets, String conditions) {
             final Map<String, String> params = new HashMap<String, String>(5);
-            params.put(DATASOURCEINFO_PARAM_KEY, AnswerCoreConstant.GSON.toJson(dataSourceInfo));
+            params.put(DATASOURCEINFO_PARAM_KEY, AnswerCoreConstant.GSON.toJson(dataSourceInfoList));
             params.put(DATASET_PARAM_KEY, StringUtils.join(dataSets, ','));
             if (!StringUtils.isEmpty(conditions)) {
                 params.put(PARAMS, conditions);

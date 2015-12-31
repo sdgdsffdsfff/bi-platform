@@ -2,7 +2,7 @@
     <h4>基本设置</h4>
     <div class="fix-report-task-name-set c-f">
         <span class="f-l">任务名称：</span>
-        <input class="f-l j-task-id" type="text" id="{{taskInfo.taskId}}" value="{{taskInfo.taskName}}"/>
+        <input class="f-l j-task-id" type="text" task-id="{{taskInfo.taskId}}" value="{{taskInfo.taskName}}"/>
     </div>
 
     <div class="fix-report-task-main-set">
@@ -33,10 +33,10 @@
     <div class="item-set-execute-time c-f j-isRunNow-set{{if taskInfo.isRunNow}} hide {{/if}}">
         <span class="f-l">执行时间:</span>
         <div class="f-l c-f">
-            <span class="f-l">时</span>
             <input type="text" class="f-l j-time-hour" {{if !taskInfo.isRunNow}} value="{{taskInfo.executeStrategy.hour}}" {{/if}} placeholder="请输入数字"/>
-            <span class="f-l">分</span>
+            <span class="f-l">时</span>
             <input type="text" class="f-l j-time-minute" {{if !taskInfo.isRunNow}} value="{{taskInfo.executeStrategy.minute}}" {{/if}} placeholder="请输入数字"/>
+            <span class="f-l">分</span>
         </div>
     </div>
     <div class="item-set-execute-granular c-f j-isRunNow-set{{if taskInfo.isRunNow}} hide {{/if}}">

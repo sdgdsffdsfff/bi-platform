@@ -124,8 +124,8 @@ public class DataSourceGroupServiceImpl implements DataSourceGroupService {
             throw new DataSourceOperationException("datasource group's name already exist");
         }
         if (!isValidate(dsG, securityKey)) {
-            LOG.debug("db connection info not correct");
-            throw new DataSourceOperationException("db connection info not correct");
+            // 不检查目前组内所有的数据源是否有效
+            LOG.warn("some of db connection info not correct,please check.");
         }
     }
 
@@ -185,6 +185,8 @@ public class DataSourceGroupServiceImpl implements DataSourceGroupService {
         }
         for (DataSourceDefine ds : dsG.getDataSourceList().values()) {
             if (!dsService.isValidateConn(ds, securityKey)) {
+                LOG.warn("datasource:{} in dataSoucegroup:{} is not incollect,please check.",
+                        ds.getName(), dsG.getName());
                 return false;
             }
         }

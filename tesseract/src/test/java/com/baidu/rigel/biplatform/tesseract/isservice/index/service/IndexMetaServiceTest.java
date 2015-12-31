@@ -64,15 +64,17 @@ public class IndexMetaServiceTest extends IndexTestBase {
     public void testInitMiniCubeIndexMetaBoundaryTest() throws Exception {
         List<Cube> cubeList = null;
         DataSourceInfo dataSourceInfo = new SqlDataSourceInfo("aaa");
+        List<DataSourceInfo> dataSourceInfoList = new ArrayList<DataSourceInfo>();
+        dataSourceInfoList.add(dataSourceInfo);
         List<IndexMeta> result = null;
         // cubeList == null
-        result = this.indexMetaService.initMiniCubeIndexMeta(cubeList, dataSourceInfo);
+        result = this.indexMetaService.initMiniCubeIndexMeta(cubeList, dataSourceInfoList);
         Assert.assertEquals(0, result.size());
         result = this.indexMetaService.initMiniCubeIndexMeta(cubeList, null);
         Assert.assertEquals(0, result.size());
         // cubeList.size() == 0
         cubeList = new ArrayList<Cube>();
-        result = this.indexMetaService.initMiniCubeIndexMeta(cubeList, dataSourceInfo);
+        result = this.indexMetaService.initMiniCubeIndexMeta(cubeList, dataSourceInfoList);
         Assert.assertEquals(0, result.size());
         result = this.indexMetaService.initMiniCubeIndexMeta(cubeList, null);
         Assert.assertEquals(0, result.size());
@@ -88,9 +90,10 @@ public class IndexMetaServiceTest extends IndexTestBase {
         ConfigQuestionModel question = this.mockQuestion();
         List<Cube> cubes = new ArrayList<Cube>();
         cubes.add(question.getCube());
-        
+        List<DataSourceInfo> dataSourceInfoList = new ArrayList<DataSourceInfo>();
+        dataSourceInfoList.add(question.getDataSourceInfo());
         List<IndexMeta> result = this.indexMetaService.initMiniCubeIndexMeta(cubes,
-                question.getDataSourceInfo());
+            dataSourceInfoList);
         Assert.assertEquals(1, result.size());
         IndexMeta idxMeta = result.get(0);
         MiniCube currCube = (MiniCube) question.getCube();
@@ -114,7 +117,7 @@ public class IndexMetaServiceTest extends IndexTestBase {
         timeDim.addLevel(timeLevel);
         timeLevel.setDimension(timeDim);
         currCube.getDimensions().put("the_date", timeDim);
-        result = this.indexMetaService.initMiniCubeIndexMeta(cubes, question.getDataSourceInfo());
+        result = this.indexMetaService.initMiniCubeIndexMeta(cubes, dataSourceInfoList);
         Assert.assertEquals(1, result.size());
         idxMeta = result.get(0);
         Assert.assertEquals("the_date", idxMeta.getShardDimBase());
@@ -123,7 +126,7 @@ public class IndexMetaServiceTest extends IndexTestBase {
         cubes.clear();
         question.getCube().getDimensions().clear();
         cubes.add(question.getCube());
-        result = this.indexMetaService.initMiniCubeIndexMeta(cubes, question.getDataSourceInfo());
+        result = this.indexMetaService.initMiniCubeIndexMeta(cubes, dataSourceInfoList);
         Assert.assertEquals(1, result.size());
         idxMeta = result.get(0);
         currCube = (MiniCube) question.getCube();
@@ -142,7 +145,7 @@ public class IndexMetaServiceTest extends IndexTestBase {
         cubes.clear();
         question.getCube().getMeasures().clear();
         cubes.add(question.getCube());
-        result = this.indexMetaService.initMiniCubeIndexMeta(cubes, question.getDataSourceInfo());
+        result = this.indexMetaService.initMiniCubeIndexMeta(cubes, dataSourceInfoList);
         Assert.assertEquals(1, result.size());
         idxMeta = result.get(0);
         currCube = (MiniCube) question.getCube();

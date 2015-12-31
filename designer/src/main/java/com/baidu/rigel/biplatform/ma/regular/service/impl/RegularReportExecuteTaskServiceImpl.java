@@ -587,7 +587,7 @@ public class RegularReportExecuteTaskServiceImpl implements RegularReportExecute
                     // 获取当前月份
                     int[] quarterMonth = { 1, 4, 7, 10 };
                     int monthValue = now.getMonth().getValue();
-                    int startMonth = quarterMonth[monthValue / 3];
+                    int startMonth = quarterMonth[monthValue / 4];
                     // 本季度第一天
                     start = LocalDate.of(now.getYear(), startMonth, 1);
                     // 当前日期

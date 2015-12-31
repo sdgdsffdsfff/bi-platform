@@ -24,6 +24,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -31,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
+import com.baidu.rigel.biplatform.ac.minicube.CallbackLevel;
 import com.baidu.rigel.biplatform.ac.minicube.MiniCube;
 import com.baidu.rigel.biplatform.ac.model.Cube;
 import com.baidu.rigel.biplatform.ac.model.Dimension;
@@ -47,10 +50,13 @@ import com.baidu.rigel.biplatform.ac.util.UnicodeUtils;
 import com.baidu.rigel.biplatform.ma.model.consts.Constants;
 import com.baidu.rigel.biplatform.ma.model.utils.GsonUtils;
 import com.baidu.rigel.biplatform.ma.report.exception.PivotTableParseException;
+import com.baidu.rigel.biplatform.ma.report.model.ExtendArea;
+import com.baidu.rigel.biplatform.ma.report.model.ExtendAreaType;
 import com.baidu.rigel.biplatform.ma.report.model.FormatModel;
 import com.baidu.rigel.biplatform.ma.report.model.Item;
 import com.baidu.rigel.biplatform.ma.report.model.LinkInfo;
 import com.baidu.rigel.biplatform.ma.report.model.LogicModel;
+import com.baidu.rigel.biplatform.ma.report.model.ReportDesignModel;
 import com.baidu.rigel.biplatform.ma.report.query.QueryAction;
 import com.baidu.rigel.biplatform.ma.report.query.QueryAction.OrderDesc;
 import com.baidu.rigel.biplatform.ma.report.query.pivottable.CellData;
@@ -65,7 +71,6 @@ import com.baidu.rigel.biplatform.ma.report.utils.ItemUtils;
 import com.baidu.rigel.biplatform.ma.report.utils.QueryUtils;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
 
 /**
  * 类DataModelUtils.java的实现描述：DataModel操作工具类
@@ -155,7 +160,37 @@ public final class DataModelUtils {
     private DataModelUtils() {
 
     }
+    
 
+    /**
+     * 下钻时，需要考虑级联下拉框用到的维度组组合下钻场景，如果带有父节点，需要截取掉父节点的datamodel数据才能进行merage update by majun
+     * 
+     * @param dm4Merage dm4Merage
+     * @param uniqueName uniqueName
+     * @param condition condition
+     * @return 返回merge完的 DataModel
+     */
+    public static DataModel truncationDataModel(DataModel dm4Merage, String uniqueName, String condition) {
+        HeadField fisrtHf = dm4Merage.getRowHeadFields().get(0);
+
+        if (MetaNameUtil.isAllMemberUniqueName(fisrtHf.getValue()) && (condition.split("\\}").length == 1)) {
+            // String uniqueName4split = String.valueOf(queryParams.get("uniqueName"));
+            int subCount = MetaNameUtil.parseUnique2NameArray(uniqueName).length - 1;
+            for (int i = 0; i < subCount - 1; i++) {
+                HeadField df = fisrtHf.getChildren().get(0);
+                fisrtHf = df;
+            }
+            dm4Merage.setRowHeadFields(fisrtHf.getChildren());
+            dm4Merage.setRecordSize(dm4Merage.getRecordSize() - subCount);
+            // 去掉一层父级，列数据也需要对应去掉一级
+            for (List<BigDecimal> baseDataList : dm4Merage.getColumnBaseData()) {
+                for (int i = 0; i < subCount; i++) {
+                    baseDataList.remove(0);
+                }
+            }
+        }
+        return dm4Merage;
+    }
     /**
      * 将DataModel转换成前端展现需要的PivotTable
      * 
@@ -207,7 +242,7 @@ public final class DataModelUtils {
         // s1. calc colHeight
         // s2. trans colField
         // s3. if rowAxis's exists,fill the first col of colFields
-        String[] dimCaptions = getDimCaptions(cube, logicModel); //getDimCaptions(cube, rowHeadFields);
+        String[] dimCaptions = getDimCaptions(cube, logicModel); // getDimCaptions(cube, rowHeadFields);
         int rowWidth = getHeightOfHeadFieldList(rowHeadFields);
         if (rowHeadFields != null && rowHeadFields.size() != 0) {
             List<ColField> firstColFields = colFields.get(0);
@@ -323,23 +358,23 @@ public final class DataModelUtils {
 
         // PivotTableUtils.addSummaryRowHead(pTable);
         pTable.setOthers(oriDataModel.getOthers());
-        if (pTable.getRowHeadFields () == null) {
-            pTable.setRowHeadFields (Lists.newArrayList ());
+        if (pTable.getRowHeadFields() == null) {
+            pTable.setRowHeadFields(Lists.newArrayList());
         }
         return pTable;
     }
 
-    protected static String[] getDimCaptions(Cube cube, LogicModel logicModel) {
+    public static String[] getDimCaptions(Cube cube, LogicModel logicModel) {
         if (cube == null || logicModel == null) {
             return new String[0];
         }
-        Item[] rows = logicModel.getRows ();
+        Item[] rows = logicModel.getRows();
         if (rows == null || rows.length == 0) {
             return new String[0];
         }
         String[] rs = new String[rows.length];
         for (int i = 0; i < rows.length; ++i) {
-            rs[i] = cube.getDimensions().get(rows[i].getOlapElementId ()).getCaption ();
+            rs[i] = cube.getDimensions().get(rows[i].getOlapElementId()).getCaption();
         }
         return rs;
     }
@@ -481,8 +516,9 @@ public final class DataModelUtils {
                         }
                     } else {
                         // TODO 之后需要修改
-                        if (orderDesc != null && ((column.tableName + "_" + column.name).equals(orderDesc.getName()) ||
-                                column.name.equals(orderDesc.getName())) && !setOrder) {
+                        if (orderDesc != null
+                                && ((column.tableName + "_" + column.name).equals(orderDesc.getName()) || column.name
+                                        .equals(orderDesc.getName())) && !setOrder) {
                             colDefine.setOrderby(orderDesc.getOrderType().toLowerCase());
                             setOrder = true;
                         }
@@ -622,6 +658,34 @@ public final class DataModelUtils {
         }
         return keys;
     }
+    
+    /**
+     * 获取平面表DataModel中数据的正确的key顺序
+     * 
+     * @param cube
+     * @param logicModel
+     * @param columns
+     * @return
+     */
+    public static List<String> getKeysInOrder(Cube cube, LogicModel logicModel) {
+        // 获取Cube中的维度信息
+        // 纵轴
+        Item[] cols = logicModel.getColumns();
+        // 存储列的key，key = 表明.列名
+        List<String> keys = Lists.newArrayList();
+        for (Item col : cols) {
+            // boolean finished = false;
+            // 处理维度
+            OlapElement ele = ItemUtils.getOlapElementByItem(col, cube.getSchema(), cube.getId());
+            if (ele != null) {
+                keys.add(getRealKey(ele, cube));
+            } else {
+                LOG.debug("can't get olap element with cube id : " + cube.getId());
+                throw new RuntimeException("can't get olap element with cube id : " + cube.getId());
+            }
+        }
+        return keys;
+    }
 
     /**
      * 获取数据存储对应的key值信息 getRealKey
@@ -632,6 +696,18 @@ public final class DataModelUtils {
      * @return
      */
     private static String getRealKey(OlapElement ele, Cube cube, Map<String, String> tmp) {
+        return tmp.get(getRealKey(ele, cube));
+    }
+    
+    /**
+     * 获取数据存储对应的key值信息 getRealKey
+     * 
+     * @param ele olapElement
+     * @param cube 立方体信息
+     * @param tmp key值map
+     * @return
+     */
+    private static String getRealKey(OlapElement ele, Cube cube) {
         String tmpKey = null;
         // 如果是维度
         if (ele instanceof Dimension) {
@@ -639,25 +715,11 @@ public final class DataModelUtils {
             Level level = dim.getLevels().values().toArray(new Level[0])[0];
             // 普通维度
             tmpKey = level.getDimTable() + "." + level.getName();
-//            // 如果是时间维度
-//            if (dim.isTimeDimension()) {
-//                tmpKey = ((MiniCube) cube).getSource() + "." + dim.getFacttableColumn();
-//            } else {
-//                Level level = dim.getLevels().values().toArray(new Level[0])[0];
-//                // Callback维度
-//                if (level.getType() == LevelType.CALL_BACK) {
-//                    tmpKey = ((MiniCube) cube).getSource() + "." + dim.getFacttableColumn();
-//                } else {
-//                    // 普通维度
-//                    tmpKey = level.getDimTable() + "." + level.getName();
-//                }
-//            }
         } else {
             // 如果是指标
             tmpKey = ((MiniCube) cube).getSource() + "." + ((Measure) ele).getDefine();
         }
-        return tmp.get(tmpKey);
-
+        return tmpKey;
     }
 
     private static boolean hasSumRow(List<List<RowHeadField>> rowFields) {
@@ -677,48 +739,48 @@ public final class DataModelUtils {
         return firstRow.getV() != null && firstRow.getV().contains("合计");
     }
 
-//    /**
-//     * 
-//     * @param cube
-//     * @param rowHeadFields
-//     * @return String[]
-//     */
-//    private static String[] getDimCaptions(Cube cube, List<HeadField> rowHeadFields) {
-//        List<String> captions = Lists.newArrayList();
-//        if (CollectionUtils.isEmpty(rowHeadFields)) {
-//            return new String[] {};
-//        }
-//        HeadField headField = rowHeadFields.get(0);
-//        // for (HeadField headField : rowHeadFields) {
-//        if (!CollectionUtils.isEmpty(headField.getNodeList())) {
-//            Collections.addAll(captions, getDimCaptions(cube, headField.getNodeList()));
-//        }
-//        String uniqueName = headField.getNodeUniqueName();
-//        // TODO 这里有问题，需要重新考虑
-//        if ("合计".equals(headField.getCaption())) {
-//            uniqueName = headField.getChildren().get(0).getValue();
-//        } else {
-//            uniqueName = headField.getValue();
-//        }
-//        String dimName = MetaNameUtil.getDimNameFromUniqueName(uniqueName);
-//        captions.add(getDimensionCaptionByName(cube, dimName));
-//        return captions.toArray(new String[0]);
-//    }
+    // /**
+    // *
+    // * @param cube
+    // * @param rowHeadFields
+    // * @return String[]
+    // */
+    // private static String[] getDimCaptions(Cube cube, List<HeadField> rowHeadFields) {
+    // List<String> captions = Lists.newArrayList();
+    // if (CollectionUtils.isEmpty(rowHeadFields)) {
+    // return new String[] {};
+    // }
+    // HeadField headField = rowHeadFields.get(0);
+    // // for (HeadField headField : rowHeadFields) {
+    // if (!CollectionUtils.isEmpty(headField.getNodeList())) {
+    // Collections.addAll(captions, getDimCaptions(cube, headField.getNodeList()));
+    // }
+    // String uniqueName = headField.getNodeUniqueName();
+    // // TODO 这里有问题，需要重新考虑
+    // if ("合计".equals(headField.getCaption())) {
+    // uniqueName = headField.getChildren().get(0).getValue();
+    // } else {
+    // uniqueName = headField.getValue();
+    // }
+    // String dimName = MetaNameUtil.getDimNameFromUniqueName(uniqueName);
+    // captions.add(getDimensionCaptionByName(cube, dimName));
+    // return captions.toArray(new String[0]);
+    // }
 
-//    /**
-//     * 
-//     * @param cube
-//     * @param dimName
-//     * @return
-//     */
-//    private static String getDimensionCaptionByName(Cube cube, String dimName) {
-//        for (Dimension dim : cube.getDimensions().values()) {
-//            if (dim.getName().equals(dimName)) {
-//                return dim.getCaption();
-//            }
-//        }
-//        return dimName;
-//    }
+    // /**
+    // *
+    // * @param cube
+    // * @param dimName
+    // * @return
+    // */
+    // private static String getDimensionCaptionByName(Cube cube, String dimName) {
+    // for (Dimension dim : cube.getDimensions().values()) {
+    // if (dim.getName().equals(dimName)) {
+    // return dim.getCaption();
+    // }
+    // }
+    // return dimName;
+    // }
 
     /**
      * @param rowFields
@@ -882,7 +944,7 @@ public final class DataModelUtils {
         SimpleDateFormat src = new SimpleDateFormat("yyyyMMdd");
         SimpleDateFormat target = new SimpleDateFormat("yyyy-MM-dd");
         List<HeadField> ancestorFileds = null;
-     // hasStoredMap用于记录已经存过的rowField
+        // hasStoredMap用于记录已经存过的rowField
         Map<String, HeadField> hasStoredMap = new HashMap<String, HeadField>();
         for (int j = 0; j < leafFileds.size(); ++j) {
             HeadField filed = leafFileds.get(j);
@@ -892,10 +954,10 @@ public final class DataModelUtils {
             for (int i = 0; i < ancestorFileds.size(); i++) {
                 HeadField headField = ancestorFileds.get(i);
                 if (i == 0 && hasStoredMap.get(headField.getValue()) != null) {
-                    if(headField.getParent () == null) {
+                    if (headField.getParent() == null) {
                         continue;
-                    } else if (headField.getParent ().equals (hasStoredMap.get(headField.getValue()).getParent ()) 
-                        && headField.getParent ().getParent () == null) {
+                    } else if (headField.getParent().equals(hasStoredMap.get(headField.getValue()).getParent())
+                            && headField.getParent().getParent() == null) {
                         continue;
                     }
                 } else {
@@ -936,7 +998,8 @@ public final class DataModelUtils {
                     Dimension dim = getDimByName(cube, dimNameFromUniqueName);
                     final int length = MetaNameUtil.parseUnique2NameArray(rowField.getUniqueName()).length;
                     final boolean lastLevel = dim.getLevels().size() >= length;
-                    if (dim != null && lastLevel) {
+                    Level level = dim.getLevels().values().toArray(new Level[0])[0];
+                    if (dim != null && (lastLevel || (level instanceof CallbackLevel))) {
                         rowField.setExpand(true);
                     } else {
                         rowField.setExpand(null);
@@ -1013,7 +1076,7 @@ public final class DataModelUtils {
      * @return
      */
     private static int getIndentOfHeadField(HeadField headField, int indent) {
-        if (headField.getParent() != null) {
+        if (headField != null && (headField.getParent() != null || headField.isHasChildren())) {
             return getIndentOfHeadField(headField.getParent(), indent + 1);
         } else {
             return indent;
@@ -1265,7 +1328,7 @@ public final class DataModelUtils {
      * @param rowHeadFields
      * @return
      */
-    private static HeadField getRealRowHeadByRowNum(int rowNum, List<HeadField> rowHeadFields) {
+    public static HeadField getRealRowHeadByRowNum(int rowNum, List<HeadField> rowHeadFields) {
         List<HeadField> tmp = com.baidu.rigel.biplatform.ac.util.DataModelUtils.getLeafNodeList(rowHeadFields);
         return tmp.get(rowNum);
     }
@@ -1359,25 +1422,34 @@ public final class DataModelUtils {
     /**
      * 
      * decorateTable
-     * @param formatModel
-     * @param table
-     * @param isShowZero
+     * 
+     * @param formatModel formatModel
+     * @param table table
+     * @param targetArea targetArea
+     * @param reportDesignModel reportDesignModel
      */
-    public static void decorateTable(FormatModel formatModel, PivotTable table, boolean isShowZero) {
+    public static void decorateTable(FormatModel formatModel, PivotTable table, ExtendArea targetArea,
+            ReportDesignModel reportDesignModel) {
         decorateTable(formatModel, table);
+        Map<String, Object> otherSetting = targetArea.getOtherSetting();
+        // 当表格为liteolap表时，需要取到ref的area，才能取到正确的otherSetting
+        if (targetArea.getType() == ExtendAreaType.LITEOLAP_TABLE) {
+            otherSetting = reportDesignModel.getExtendById(targetArea.getReferenceAreaId()).getOtherSetting();
+        }
+        boolean isShowZero = DataModelUtils.isShowZero(otherSetting);
         if (isShowZero) {
             List<List<CellData>> cellDatas = table.getDataSourceColumnBased();
             int cellDatasIndex = 0;
             if (cellDatas != null) {
-                while(cellDatasIndex < cellDatas.size()) {
+                while (cellDatasIndex < cellDatas.size()) {
                     List<CellData> cellData = cellDatas.get(cellDatasIndex);
                     cellDatasIndex++;
                     if (cellData != null) {
                         int cellDataIndex = 0;
-                        while(cellDataIndex < cellData.size()) {
+                        while (cellDataIndex < cellData.size()) {
                             if (cellData.get(cellDataIndex).getV() == null) {
                                 cellData.get(cellDataIndex).setV(BigDecimal.ZERO);
-                            } 
+                            }
                             cellDataIndex++;
                         }
                     }
@@ -1385,10 +1457,10 @@ public final class DataModelUtils {
             }
         }
     }
-    
+
     /**
-     * 修饰平面表数据
-     * decoratePlaneTable
+     * 修饰平面表数据 decoratePlaneTable
+     * 
      * @param table
      * @param isShowZero
      */
@@ -1408,13 +1480,17 @@ public final class DataModelUtils {
                 newDatas.add(newData);
             });
             table.setData(newDatas);
-        }       
+        }
     }
-    
+
     /**
      * 
      * @param formatModel 格式模型
      * @param table 透视表
+     */
+    /**
+     * @param formatModel
+     * @param table
      */
     public static void decorateTable(FormatModel formatModel, PivotTable table) {
         if (formatModel == null) {
@@ -1465,6 +1541,10 @@ public final class DataModelUtils {
                 define.setAlign(align);
             }
         }
+        /**
+         * 为pivottable增加操作列属性, add by majun
+         */
+        OlapLinkUtils.addOperationColum(linkInfoMap, table);
 
     }
 
@@ -1475,9 +1555,9 @@ public final class DataModelUtils {
      * @param dataModel
      * @return
      */
-    public static String convertDataModel2CsvStringForPlaneTable(Cube cube, DataModel dataModel, 
-            LogicModel logicModel, Map<String, Object> setting) {
-        long begin = System.currentTimeMillis();
+    public static String convertDataModel2CsvStringForPlaneTable(Cube cube, DataModel dataModel, LogicModel logicModel,
+            Map<String, Object> setting) {
+         long begin = System.currentTimeMillis();
         StringBuilder rs = new StringBuilder();
         if (dataModel == null) {
             return rs.toString();
@@ -1492,10 +1572,16 @@ public final class DataModelUtils {
         List<Column> columns = tableData.getColumns();
         // 获取正确的下载顺序
         List<String> keys = getKeysInOrder(cube, logicModel, columns);
+        List<TableData.Column> columnsInOrder = new ArrayList<TableData.Column>();
         for (String key : keys) {
             for (Column column : columns) {
                 if (column.key.equals(key)) {
-                    rs.append(column.caption + ",");
+                    columnsInOrder.add(column);
+                    if (com.baidu.rigel.biplatform.ac.util.DataModelUtils.isChar(column.dataType)) {
+                        rs.append("\t" + column.caption + ",");
+                    } else {
+                        rs.append(column.caption + ",");
+                    }
                     break;
                 }
             }
@@ -1513,13 +1599,18 @@ public final class DataModelUtils {
         // 构建数据
         for (int i = 0; i < totalRecordSize; i++) {
             Map<String, String> rowBasedData = rowBasedDatas.get(i);
-            for (String key : keys) {
-                if (!isShowZero(setting) && StringUtils.isEmpty(rowBasedData.get(key))) {
+            for (Column column : columnsInOrder) {
+                if (!isShowZero(setting) && StringUtils.isEmpty(rowBasedData.get(column.key))) {
                     rs.append("-" + ",");
-                } else if (isShowZero(setting) && StringUtils.isEmpty(rowBasedData.get(key))) {
+                } else if (isShowZero(setting) && StringUtils.isEmpty(rowBasedData.get(column.key))) {
                     rs.append("0" + ",");
                 } else {
-                    rs.append(rowBasedData.get(key) + ",");                                        
+                    String dataCell = rowBasedData.get(column.key);
+                    if (DataModelUtils.isNumeric(dataCell)) {
+                        rs.append(dataCell + ",");
+                    } else {
+                        rs.append("\t" + dataCell + ",");
+                    }
                 }
             }
             rs.replace(rs.length() - 1, rs.length(), "");
@@ -1528,10 +1619,19 @@ public final class DataModelUtils {
         LOG.info("transfer datamodel 2 csv string cost:" + (System.currentTimeMillis() - begin) + "ms!");
         return rs.toString();
     }
-
+    
+    public static boolean isNumeric(String str){ 
+        Pattern pattern = Pattern.compile("(-?[0-9]+.?[0-9]+)|[0-9]|-[0-9]"); 
+        Matcher isNum = pattern.matcher(str);
+        if( !isNum.matches() ){
+            return false; 
+        } 
+        return true; 
+    }
+    
     /**
-     * 在显示前对DataModel的数据进行处理，该方法主要针对下载而言
-     * preProcessDataModel4Show
+     * 在显示前对DataModel的数据进行处理，该方法主要针对下载而言 preProcessDataModel4Show
+     * 
      * @param dataModel 数据模型
      * @param setting 配置信息
      */
@@ -1539,7 +1639,7 @@ public final class DataModelUtils {
         if (setting == null) {
             return dataModel;
         }
-        
+
         // 当前对是否显示0还是-进行处理
         if (isShowZero(setting)) {
             List<List<BigDecimal>> allDatas = Lists.newArrayList();
@@ -1557,11 +1657,11 @@ public final class DataModelUtils {
             dataModel.setColumnBaseData(allDatas);
         }
         return dataModel;
-    }   
-    
+    }
+
     /**
-     * 判断某个表格中的数据是显示0还是-
-     * isShowZero
+     * 判断某个表格中的数据是显示0还是- isShowZero
+     * 
      * @param setting
      * @return
      */
@@ -1572,7 +1672,7 @@ public final class DataModelUtils {
         }
         return isShowZero;
     }
-    
+
     /**
      * 将dataModel转化为csv文件
      * 

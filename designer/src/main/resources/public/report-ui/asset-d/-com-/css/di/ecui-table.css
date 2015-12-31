@@ -359,8 +359,8 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    height: 15px;
-    line-height: 15px;
+    /*height: 15px;*/
+    /*line-height: 15px;*/
 }
 
 .ui-table-head-drag {

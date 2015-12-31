@@ -42,10 +42,13 @@ import com.baidu.rigel.biplatform.ac.query.data.DataModel;
 import com.baidu.rigel.biplatform.ac.query.data.HeadField;
 import com.baidu.rigel.biplatform.ac.query.data.TableData;
 import com.baidu.rigel.biplatform.ac.query.data.TableData.Column;
+import com.baidu.rigel.biplatform.ma.report.model.ExtendArea;
+import com.baidu.rigel.biplatform.ma.report.model.ExtendAreaType;
 import com.baidu.rigel.biplatform.ma.report.model.FormatModel;
 import com.baidu.rigel.biplatform.ma.report.model.Item;
 import com.baidu.rigel.biplatform.ma.report.model.LinkInfo;
 import com.baidu.rigel.biplatform.ma.report.model.LogicModel;
+import com.baidu.rigel.biplatform.ma.report.model.ReportDesignModel;
 import com.baidu.rigel.biplatform.ma.report.query.QueryAction;
 import com.baidu.rigel.biplatform.ma.report.query.QueryAction.OrderDesc;
 import com.baidu.rigel.biplatform.ma.report.query.pivottable.CellData;
@@ -303,8 +306,11 @@ public class DataModelUtilsTest {
         FormatModel formatModel = new FormatModel();
         PivotTable table = new PivotTable();
         table.setDataSourceColumnBased(parseCellDatas(buildDataModel().getColumnBaseData()));
+        ExtendArea targetArea = Mockito.mock(ExtendArea.class);
+        Mockito.doReturn(ExtendAreaType.TABLE).when(targetArea).getType();
+        ReportDesignModel reportDesignModel = Mockito.mock(ReportDesignModel.class);
         try {
-            DataModelUtils.decorateTable(formatModel, table, true);
+            DataModelUtils.decorateTable(formatModel, table, targetArea, reportDesignModel);
             BigDecimal actual = table.getDataSourceColumnBased().get(0).get(0).getV();
             Assert.assertEquals(BigDecimal.ZERO, actual);
         } catch (Exception e) {
@@ -800,8 +806,8 @@ public class DataModelUtilsTest {
         dataModel.setColumnBaseData(multiDatas);
         
         // 构建平面表数据
-        Column columnDim = new Column("test.Dim", "Dim", "captionDim", "test");
-        Column columnMeasure = new Column("test.Measure", "Measure", "captionMeasure", "test");
+        Column columnDim = new Column("test.Dim", "Dim", "captionDim", "varchar", "test");
+        Column columnMeasure = new Column("test.Measure", "Measure", "captionMeasure", "varchar", "test");
         List<Column> columns = Lists.newArrayList();
         columns.add(columnDim);
         columns.add(columnMeasure);
@@ -842,6 +848,38 @@ public class DataModelUtilsTest {
         Mockito.doReturn (items).when (model).getRows ();
         rs = DataModelUtils.getDimCaptions (cube, model);
         Assert.assertEquals (1, rs.length);
+    }
+    
+    @Test
+    public void testIsNumeric() {
+        Assert.assertTrue(DataModelUtils.isNumeric("123123123.00000"));
+        Assert.assertTrue(DataModelUtils.isNumeric("123123123.234234"));
+        Assert.assertTrue(DataModelUtils.isNumeric("2134523453.3453450"));
+        Assert.assertTrue(DataModelUtils.isNumeric("3.0"));
+        Assert.assertTrue(DataModelUtils.isNumeric("00000.000000"));
+        Assert.assertTrue(DataModelUtils.isNumeric("-00000.000000"));
+        Assert.assertTrue(DataModelUtils.isNumeric("1000.0001000"));
+        Assert.assertTrue(DataModelUtils.isNumeric("0.0001000"));
+        Assert.assertTrue(DataModelUtils.isNumeric("0.0"));
+        Assert.assertTrue(DataModelUtils.isNumeric("0"));
+        Assert.assertTrue(DataModelUtils.isNumeric("1345345345345"));
+        Assert.assertTrue(DataModelUtils.isNumeric("-3"));
+        Assert.assertTrue(DataModelUtils.isNumeric("-36"));
+        Assert.assertTrue(DataModelUtils.isNumeric("1"));
+        Assert.assertTrue(DataModelUtils.isNumeric("9"));
+        Assert.assertTrue(DataModelUtils.isNumeric("23"));
+        Assert.assertTrue(DataModelUtils.isNumeric("-3.01"));
+        
+        Assert.assertTrue(!DataModelUtils.isNumeric(""));
+        Assert.assertTrue(!DataModelUtils.isNumeric(" "));
+        Assert.assertTrue(!DataModelUtils.isNumeric("a"));
+        Assert.assertTrue(!DataModelUtils.isNumeric("-a"));
+        Assert.assertTrue(!DataModelUtils.isNumeric("d3.0"));
+        Assert.assertTrue(!DataModelUtils.isNumeric("3.0b"));
+        Assert.assertTrue(!DataModelUtils.isNumeric("dfdfb"));
+        Assert.assertTrue(!DataModelUtils.isNumeric("中文"));
+        Assert.assertTrue(!DataModelUtils.isNumeric("中文.0"));
+        Assert.assertTrue(!DataModelUtils.isNumeric("0.99.1"));
     }
     /**
      * 将数据转为cellData

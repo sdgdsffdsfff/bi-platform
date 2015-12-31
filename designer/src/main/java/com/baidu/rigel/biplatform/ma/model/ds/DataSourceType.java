@@ -69,7 +69,12 @@ public enum DataSourceType {
     /**
      * PALO
      */
-    PALO("com.mysql.jdbc.Driver", "jdbc:mysql://", "/");
+    PALO("com.mysql.jdbc.Driver", "jdbc:mysql://", "/"),
+    
+    /**
+     * DRUID
+     */
+    DRUID("com.baidu.rigel.druid.sql.jdbc.DruidDriver", "jdbc:druid://", "/");
     
     /**
      * driver

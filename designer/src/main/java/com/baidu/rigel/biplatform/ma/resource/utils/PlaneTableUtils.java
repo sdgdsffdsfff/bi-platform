@@ -197,9 +197,9 @@ public class PlaneTableUtils {
         String granularity = (String) requestParams.get(GRANULARITY);
 
         // 如果有不是标准时间维度
-        if (!isStandardTime(value, granularity)) {
-            return null;
-        }
+//        if (!isStandardTime(value, granularity)) {
+//            return null;
+//        }
         return cov2StandTime(value, granularity);
     }
 

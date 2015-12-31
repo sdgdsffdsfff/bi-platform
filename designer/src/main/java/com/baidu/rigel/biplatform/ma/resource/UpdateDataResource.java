@@ -15,12 +15,14 @@
  */
 package com.baidu.rigel.biplatform.ma.resource;
 
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,13 +31,28 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.baidu.rigel.biplatform.ac.model.Cube;
 import com.baidu.rigel.biplatform.ac.query.MiniCubeConnection;
+import com.baidu.rigel.biplatform.ac.query.MiniCubeDriverManager;
 import com.baidu.rigel.biplatform.ac.query.data.DataSourceInfo;
+import com.baidu.rigel.biplatform.ac.query.data.impl.SqlDataSourceInfo;
+import com.baidu.rigel.biplatform.ac.query.data.impl.SqlDataSourceInfo.DataBase;
+import com.baidu.rigel.biplatform.ma.ds.exception.DataSourceOperationException;
 import com.baidu.rigel.biplatform.ma.ds.service.DataSourceConnectionService;
 import com.baidu.rigel.biplatform.ma.ds.service.DataSourceConnectionServiceFactory;
+import com.baidu.rigel.biplatform.ma.ds.service.DataSourceGroupService;
 import com.baidu.rigel.biplatform.ma.ds.service.DataSourceService;
 import com.baidu.rigel.biplatform.ma.model.ds.DataSourceDefine;
+import com.baidu.rigel.biplatform.ma.model.ds.DataSourceGroupDefine;
 import com.baidu.rigel.biplatform.ma.model.utils.GsonUtils;
+import com.baidu.rigel.biplatform.ma.report.exception.QueryModelBuildException;
+import com.baidu.rigel.biplatform.ma.report.model.ExtendArea;
+import com.baidu.rigel.biplatform.ma.report.model.ExtendAreaType;
+import com.baidu.rigel.biplatform.ma.report.model.ReportDesignModel;
+import com.baidu.rigel.biplatform.ma.report.service.ReportDesignModelService;
+import com.baidu.rigel.biplatform.ma.report.utils.ContextManager;
+import com.baidu.rigel.biplatform.ma.report.utils.QueryUtils;
+import com.google.common.collect.Lists;
 //import com.baidu.rigel.biplatform.ma.report.service.ReportNoticeByJmsService;
 import com.google.common.collect.Maps;
 import com.google.gson.reflect.TypeToken;
@@ -47,7 +64,7 @@ import com.google.gson.reflect.TypeToken;
  *
  */
 @RestController
-@RequestMapping("/silkroad/reports/dataupdate")
+@RequestMapping("/silkroad")
 public class UpdateDataResource extends BaseResource {
     
     /**
@@ -61,9 +78,23 @@ public class UpdateDataResource extends BaseResource {
     @Resource
     private DataSourceService dsService;
     
+    /**
+     * dsService
+     */
+    @Resource
+    private DataSourceGroupService dsgService;
     
-//    @Resource
-//    private ReportNoticeByJmsService reportNoticeByJmsService;
+    /**
+     * dsgService
+     */
+    @Resource
+    private DataSourceGroupService dataSourceGroupService;
+    
+    /**
+     * reportDesignModelService
+     */
+    @Resource(name = "reportDesignModelService")
+    private ReportDesignModelService reportDesignModelService;
 
     /**
      * 
@@ -71,7 +102,7 @@ public class UpdateDataResource extends BaseResource {
      * @param response HttpServletResponse
      * @return ResponseResult
      */
-    @RequestMapping(method = { RequestMethod.GET, RequestMethod.POST })
+    @RequestMapping(value = "/reports/dataupdate", method = { RequestMethod.GET, RequestMethod.POST })
     public ResponseResult updateData(HttpServletRequest request, HttpServletResponse response) throws Exception {
         LOG.info("[INFO] --- --- begin update index meta with new request");
         long begin = System.currentTimeMillis();
@@ -86,10 +117,12 @@ public class UpdateDataResource extends BaseResource {
         }
         String[] factTableArray = factTables.split(",");
         ResponseResult rs = new ResponseResult();
-        DataSourceDefine ds = dsService.getDsDefine(Integer.toString(dsName.hashCode()));
+        DataSourceGroupDefine dsgDefine = dsgService.getDataSourceGroupDefine(Integer.toString(dsName.hashCode()));
+        DataSourceDefine dsDefault = dsgDefine.getActiveDataSource();
         DataSourceConnectionService<?> dsConnService = DataSourceConnectionServiceFactory.
-            getDataSourceConnectionServiceInstance(ds.getDataSourceType().toString ());
-        DataSourceInfo dsInfo = dsConnService.parseToDataSourceInfo(ds, securityKey);
+                getDataSourceConnectionServiceInstance(dsDefault.getDataSourceType().toString ());
+        List<DataSourceInfo> dsInfoList = dsConnService.getActivedDataSourceInfoList(dsgDefine, securityKey);
+
         Map<String, Map<String, String>> conds = Maps.newHashMap();
         for (String factTable : factTableArray) {
             String str = request.getParameter(factTable);
@@ -108,7 +141,7 @@ public class UpdateDataResource extends BaseResource {
         LOG.info("[INFO] --- --- factTables = {}", factTables);
         LOG.info("[INFO] --- --- conds = {}", condsStr);
         LOG.info("[INFO] --- --- --- ---- ---- end pring param list --- --- --- --- ---- ");
-        boolean result = MiniCubeConnection.ConnectionUtil.refresh(dsInfo, factTableArray, condsStr);
+        boolean result = MiniCubeConnection.ConnectionUtil.refresh(dsInfoList, factTableArray, condsStr);
 //        reportNoticeByJmsService.refreshIndex(dsInfo, factTableArray, condsStr);
         if (result) {
             rs.setStatus(0);
@@ -119,6 +152,113 @@ public class UpdateDataResource extends BaseResource {
         }
         LOG.info("[INFO] -- --- update index meta result : {}", result);
         LOG.info("[INFO] --- --- end update index meta, cost {} ms", (System.currentTimeMillis() - begin));
+        return rs;
+    }
+    
+    /**
+     * 
+     * @param request
+     *            HttpServletRequest
+     * @param response
+     *            HttpServletResponse
+     * @return ResponseResult
+     */
+    @RequestMapping(value = "/index/publish", method = { RequestMethod.GET, RequestMethod.POST })
+    public ResponseResult publish(HttpServletRequest request, HttpServletResponse response)
+            throws Exception {
+        LOG.info("[INFO] --- --- begin create index meta with new request");
+        String reportId = request.getParameter("reportId");
+        ResponseResult rs = new ResponseResult();
+        if (StringUtils.isEmpty(reportId)) {
+            rs.setStatus(1);
+            rs.setStatusInfo("请求中需要包含reportId信息。其中reportId为报表ID或报表名称");
+            return rs;
+        }
+        ReportDesignModel model = this.reportDesignModelService.getModelByIdOrName(reportId, false);
+        /**
+         * 发布
+         */
+        List<DataSourceInfo> dsInfoList;
+        try {
+            
+            DataSourceGroupDefine dataSourceGroupDefine = dsgService.getDataSourceGroupDefine(model
+                    .getDsId());
+            DataSourceDefine dsDefineActived = dsService.getDsDefine(model.getDsId());
+            DataSourceConnectionService<?> dsConnService = DataSourceConnectionServiceFactory
+                    .getDataSourceConnectionServiceInstance(dsDefineActived.getDataSourceType()
+                            .toString());
+            dsInfoList = dsConnService.getActivedDataSourceInfoList(dataSourceGroupDefine,
+                    securityKey);
+        } catch (DataSourceOperationException e) {
+            LOG.error("Fail in Finding datasource define. ", e);
+            throw e;
+        } catch (Exception e) {
+            LOG.error("Fail in parse datasource to datasourceInfo.", e);
+            throw new DataSourceOperationException(e);
+        }
+        List<Cube> cubes = Lists.newArrayList();
+        for (ExtendArea area : model.getExtendAreaList()) {
+            try {
+                if ((area.getType() != ExtendAreaType.TABLE
+                        && area.getType() != ExtendAreaType.LITEOLAP_TABLE
+                        && area.getType() != ExtendAreaType.CHART && area.getType() != ExtendAreaType.LITEOLAP_CHART)
+                        || area.getType() == ExtendAreaType.PLANE_TABLE
+                        || QueryUtils.isFilterArea(area.getType())) {
+                    continue;
+                }
+                Cube cube = QueryUtils.getCubeWithExtendArea(model, area);
+                cubes.add(cube);
+            } catch (QueryModelBuildException e) {
+                LOG.warn("It seems that logicmodel of area is null. Ingore this area. ");
+                continue;
+            }
+        }
+        /** palo不需要通知tesseract建立索引，与tesseract直接建立接口 **/
+        if (CollectionUtils.isNotEmpty(dsInfoList) && dsInfoList.get(0) != null
+                && dsInfoList.get(0) instanceof SqlDataSourceInfo) {
+            SqlDataSourceInfo sqlDataSourceInfo = (SqlDataSourceInfo) dsInfoList.get(0);
+            if (sqlDataSourceInfo.getDataBase() != DataBase.PALO
+                    && sqlDataSourceInfo.getDataBase() != DataBase.DRUID) {
+                if (cubes.size() == 0) {
+                    LOG.info("cube is empty, don't need to create index!");
+                    rs.setStatus(1);
+                    rs.setStatusInfo("cube is empty, don't need to create index!");
+                    return rs;
+                }
+                LOG.info("report published successfully, begin to request createIndex.. ,"
+                        + "databasetype:{}, productline:{}, reportName:{}.", sqlDataSourceInfo
+                        .getDataBase().name(), ContextManager.getProductLine(), model.getName());
+                new Thread() {
+                    public void run() {
+                        MiniCubeConnection connection = MiniCubeDriverManager
+                                .getConnection(dsInfoList.get(0));
+                        if (connection.publishCubes(cubes, dsInfoList)) {
+                            LOG.info("request of createIndex successfully, reportName:{}.",
+                                    model.getName());
+                        } else {
+                            LOG.warn("request of createIndex failed!! reportName:{}.",
+                                    model.getName());
+                        }
+                    }
+                }.start();
+            } else {
+                LOG.info("report published successfully, databasetype:{},"
+                        + "productline:{}, reportName:{}.", sqlDataSourceInfo.getDataBase().name(),
+                        ContextManager.getProductLine(), model.getName());
+                rs.setStatus(1);
+                rs.setStatusInfo("only Mysql of the data source to create an index.");
+                return rs;
+            }
+        } else {
+            LOG.warn("report published successfully, can not found SqlDataSourceInfo,"
+                    + "productline:{}, reportName:{}.", ContextManager.getProductLine(),
+                    model.getName());
+            rs.setStatus(1);
+            rs.setStatusInfo("can not found SqlDataSourceInfo from this report.");
+            return rs;
+        }
+        rs.setStatus(0);
+        rs.setStatusInfo("create index successfull.");
         return rs;
     }
 

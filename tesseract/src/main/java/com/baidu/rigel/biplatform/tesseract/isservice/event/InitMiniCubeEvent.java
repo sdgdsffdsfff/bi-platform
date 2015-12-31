@@ -70,7 +70,7 @@ public class InitMiniCubeEvent extends ApplicationEvent {
         /**
          * 数据源信息
          */
-        private DataSourceInfo dataSourceInfo;
+        private List<DataSourceInfo> dataSourceInfoList;
         /**
          * 是否立刻建索引
          */
@@ -88,11 +88,11 @@ public class InitMiniCubeEvent extends ApplicationEvent {
          * @param indexAsap
          * @param limited
          */
-        public InitMiniCubeInfo(List<Cube> cubeList, DataSourceInfo dataSourceInfo,
+        public InitMiniCubeInfo(List<Cube> cubeList, List<DataSourceInfo> dataSourceInfoList,
             boolean indexAsap, boolean limited) {
             super();
             this.cubeList = cubeList;
-            this.dataSourceInfo = dataSourceInfo;
+            this.dataSourceInfoList = dataSourceInfoList;
             this.indexAsap = indexAsap;
             this.limited = limited;
         }
@@ -117,22 +117,22 @@ public class InitMiniCubeEvent extends ApplicationEvent {
         }
         
         /**
-         * getter method for property dataSourceInfo
+         * getter method for property dataSourceInfoList
          * 
-         * @return the dataSourceInfo
+         * @return the dataSourceInfoList
          */
-        public DataSourceInfo getDataSourceInfo() {
-            return dataSourceInfo;
+        public List<DataSourceInfo> getDataSourceInfo() {
+            return dataSourceInfoList;
         }
         
         /**
-         * setter method for property dataSourceInfo
+         * setter method for property dataSourceInfoList
          * 
-         * @param dataSourceInfo
-         *            the dataSourceInfo to set
+         * @param dataSourceInfoList
+         *            the dataSourceInfoList to set
          */
-        public void setDataSourceInfo(DataSourceInfo dataSourceInfo) {
-            this.dataSourceInfo = dataSourceInfo;
+        public void setDataSourceInfo(List<DataSourceInfo> dataSourceInfoList) {
+            this.dataSourceInfoList = dataSourceInfoList;
         }
         
         /**
@@ -187,7 +187,7 @@ public class InitMiniCubeEvent extends ApplicationEvent {
                 }
             }
             sb.append("]");
-            sb.append(",[dataSourceInfo=" + dataSourceInfo + "]");
+            sb.append(",[dataSourceInfo=" + dataSourceInfoList + "]");
             sb.append(",[indexAsap=" + indexAsap + "]");
             sb.append(",[limited=" + limited + "]");
             sb.append("]");

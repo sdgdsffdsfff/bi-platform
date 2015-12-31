@@ -548,7 +548,7 @@ $namespace('di.shared.ui');
      * @param {string} url 目标url
      * @param {Object} options 参数
      */
-    DI_TABLE_CLASS.$handleLinkBridge = function (colDefItem, rowDefItem) {
+    DI_TABLE_CLASS.$handleLinkBridge = function (colDefItem, rowDefItem, index) {
         var address = URL.getWebRoot()
             + '/reports/'
             + this.reportId
@@ -568,7 +568,7 @@ $namespace('di.shared.ui');
         oForm.appendChild(uniqueNameParam);
 
         var meaureParam = document.createElement("input");
-        meaureParam.value = colDefItem.linkBridge;
+        meaureParam.value = colDefItem.linkBridge.split(',')[index];
         meaureParam.name = "measureId";
         oForm.appendChild(meaureParam);
         oForm.submit();

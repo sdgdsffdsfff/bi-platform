@@ -103,7 +103,8 @@ public class RelationDBConnectionServiceImplTest {
     	ds.setHostAndPort("127.0.0.1:3306");
     	ds.setEncoding("utf8");
     	connUrl =  DataSourceType.MYSQL.getPrefix() + ds.getHostAndPort() + 
-    			DataSourceType.MYSQL.getDiv() + ds.getDbInstance() + "?useUniCode=true&characterEncoding=" + ds.getEncoding();
+    			DataSourceType.MYSQL.getDiv() + ds.getDbInstance() + "?useUniCode=true&characterEncoding=" + ds.getEncoding()
+    			+ "&zeroDateTimeBehavior=convertToNull&noAccessToProcedureBodies=true";
     	Assert.assertEquals(connUrl, dsConnService.getDataSourceConnUrl(ds));
     	
 	}

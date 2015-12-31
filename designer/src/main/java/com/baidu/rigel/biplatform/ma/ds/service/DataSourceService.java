@@ -15,6 +15,8 @@
  */
 package com.baidu.rigel.biplatform.ma.ds.service;
 
+import java.util.Map;
+
 import com.baidu.rigel.biplatform.ma.ds.exception.DataSourceOperationException;
 import com.baidu.rigel.biplatform.ma.model.ds.DataSourceDefine;
 
@@ -90,6 +92,19 @@ public interface DataSourceService {
      * @throws DataSourceOperationException
      */
     public DataSourceDefine getDsDefine(String id) throws DataSourceOperationException;
+    
+    /**
+     * 
+     * 查询特定产品线下的数据源定义
+     * 
+     * @param id
+     *            数据源id
+     * 
+     * @return 数据源定义
+     * @throws DataSourceOperationException
+     */
+    public DataSourceDefine getDsDefine(String queryDsId,
+            @SuppressWarnings("rawtypes") Map requestParams) throws DataSourceOperationException;
 
     /**
      * 依据产品线和数据源名称获取数据源定义信息

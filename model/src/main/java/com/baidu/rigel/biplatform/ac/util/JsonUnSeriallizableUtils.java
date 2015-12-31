@@ -23,6 +23,7 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 
 import com.baidu.rigel.biplatform.ac.exception.MiniCubeQueryException;
+import com.baidu.rigel.biplatform.ac.minicube.CallbackMember;
 import com.baidu.rigel.biplatform.ac.minicube.MiniCubeMeasure;
 import com.baidu.rigel.biplatform.ac.minicube.MiniCubeMember;
 import com.baidu.rigel.biplatform.ac.model.Cube;
@@ -149,7 +150,16 @@ public class JsonUnSeriallizableUtils {
             throw new IllegalArgumentException("meta data json is blank.");
         }
         if (metaJsonData.getMetaType().equals(MetaType.Member)) {
-            MiniCubeMember member = new MiniCubeMember(metaJsonData.getMemberName());
+            MiniCubeMember member = null;
+            if(metaJsonData.getHasChildren()!=null){
+                CallbackMember cmember = new CallbackMember(metaJsonData.getMemberName());
+                cmember.setHasChildren(metaJsonData.getHasChildren());
+                member = cmember;
+                
+            }else {
+                member = new MiniCubeMember(metaJsonData.getMemberName());
+            }
+             
             member.generateUniqueName(metaJsonData.getMemberUniqueName());
             member.setCaption(metaJsonData.getMemberCaption());
             Dimension dimension = cube.getDimensions().get(metaJsonData.getDimensionName());
@@ -186,6 +196,13 @@ public class JsonUnSeriallizableUtils {
         metaJsonDataInfo.setMemberName(member.getName());
         metaJsonDataInfo.setMemberUniqueName(member.getUniqueName());
         metaJsonDataInfo.setQueryNodes(member.getQueryNodes());
+        /**
+         * add by Jin
+         */
+        if(member instanceof CallbackMember){
+            metaJsonDataInfo.setHasChildren(((CallbackMember)member).isHasChildren());
+        }
+        
         try {
             if (CollectionUtils.isNotEmpty(member.getChildren())) {
                 for (Member child : member.getChildMembers(null, null, null)) {

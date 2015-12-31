@@ -68,7 +68,7 @@ define(['url'], function (Url) {
          */
         getFixReportTaskMgrList: function (success) {
             $.ajax({
-                url: Url.getFixReportTaskMgrList(this.get('reportId'), this.get('compId')),
+                url: Url.getFixReportTaskMgrList(this.get('reportId')),
                 type: 'get',
                 success: function (data) {
                     var sourceData = {};

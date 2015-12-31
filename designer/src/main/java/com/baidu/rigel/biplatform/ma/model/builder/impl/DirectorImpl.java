@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -53,18 +55,15 @@ import com.baidu.rigel.biplatform.ma.model.meta.DimTableMetaDefine;
 import com.baidu.rigel.biplatform.ma.model.meta.StarModel;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
-
-
+import com.google.common.collect.Sets;
 
 /**
  * 
- * Only implementation of the <tt>Director</tt> interface.Implements
- * all optional {@link Director} operations.
+ * Only implementation of the <tt>Director</tt> interface.Implements all optional {@link Director} operations.
  * <p>
  * <hr/>
- *      all know subclasses<br/>:
- *          None
+ * all know subclasses<br/>
+ * : None
  * </p>
  * 
  * 
@@ -77,17 +76,17 @@ import com.google.common.collect.Maps;
  */
 @Service
 public class DirectorImpl implements Director {
-    
+
     /**
      * the builder service of schema
      */
     private SchemaBuilder schemaBuilder = new SchemaBuilder();
-    
+
     /**
      * logger
      */
     private Logger logger = LoggerFactory.getLogger(DirectorImpl.class);
-    
+
     /**
      * {@inheritDoc}
      */
@@ -107,7 +106,7 @@ public class DirectorImpl implements Director {
         schema.setCubes(buildCubes(schema, starModels));
         return schema;
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -117,7 +116,7 @@ public class DirectorImpl implements Director {
         if (!ParamValidateUtils.check("starModels", starModels)) {
             return schema;
         }
-        
+
         // make sure schema correct
         if (!ParamValidateUtils.check("schema", schema)) {
             throw new IllegalStateException("ori schema can not be null or must include cubes");
@@ -127,7 +126,7 @@ public class DirectorImpl implements Director {
         }
         // create new map store the new cubes which generate from new star models
         Map<String, MiniCube> newCubes = Maps.newLinkedHashMap();
-        
+
         // because the new star models lost some info, so create new schema and copy lost info to the schema
         MiniCubeSchema newSchema = new MiniCubeSchema();
         // copy lost info
@@ -137,7 +136,7 @@ public class DirectorImpl implements Director {
         newSchema.setVisible(true);
         newSchema.setDescription(schema.getDescription());
         CubeBuilder builder = new CubeBuilder();
-        
+
         for (StarModel model : starModels) {
             Cube cube = schema.getCubes().get(model.getCubeId());
             // maybe this is new cube
@@ -154,7 +153,7 @@ public class DirectorImpl implements Director {
         ((MiniCubeSchema) newSchema).setCubes(newCubes);
         return newSchema;
     }
-    
+
     /**
      * 
      * update {@link Cube} with {@link StarModel}
@@ -169,12 +168,12 @@ public class DirectorImpl implements Director {
      */
     private Cube modifyCubeWithModel(CubeBuilder builder, Schema oriSchema, StarModel starModel) {
         MiniCube oriCube = (MiniCube) oriSchema.getCubes().get(starModel.getCubeId());
-//        StarModelBuilder modelBuilder = new StarModelBuilder();
-//        StarModel oriModel = modelBuilder.buildModel((MiniCube) oriCube);
+        // StarModelBuilder modelBuilder = new StarModelBuilder();
+        // StarModel oriModel = modelBuilder.buildModel((MiniCube) oriCube);
         // if true the star model not changed
-//        if (oriModel.equals(starModel)) {
-//            return oriCube;
-//        }
+        // if (oriModel.equals(starModel)) {
+        // return oriCube;
+        // }
         MiniCube cube = new MiniCube();
         cube.setCaption(oriCube.getCaption());
         cube.setId(oriCube.getId());
@@ -185,13 +184,13 @@ public class DirectorImpl implements Director {
         cube.setDivideTableStrategyVo(oriCube.getDivideTableStrategyVo());
         Map<String, Measure> newMeasures = modifyMeasures(starModel, oriCube);
         cube.setMeasures(newMeasures);
-        
+
         // store the newest dimension
         Map<String, Dimension> dims = new HashMap<String, Dimension>();
         Map<String, Dimension> oriDims = oriCube.getDimensions();
         DimensionBuilder dimBuilder = new DimensionBuilder();
         List<Dimension> newDimensions = Lists.newArrayList();
-        
+
         for (DimTableMetaDefine dimTable : starModel.getDimTables()) {
             Dimension[] buildDims = dimBuilder.buildDimensions(dimTable, starModel.getFactTable());
             Collections.addAll(newDimensions, buildDims);
@@ -206,8 +205,9 @@ public class DirectorImpl implements Director {
 
     /**
      * 修正指标定义，将原来已经转换为维度的指标替换掉
+     * 
      * @param dims
-     * @param oriDims 
+     * @param oriDims
      * @param cube
      */
     private void resetMeasures(Map<String, Dimension> dims, Map<String, Dimension> oriDims, MiniCube cube) {
@@ -215,7 +215,7 @@ public class DirectorImpl implements Director {
         final Map<String, Dimension> tmp = Maps.newHashMap();
         oriDims.values().forEach(dim -> {
             if (dim.getType() != DimensionType.GROUP_DIMENSION && dim.getTableName().equals(cube.getSource())) {
-                tmp.put(dim.getName (), dim);
+                tmp.put(dim.getName(), dim);
             }
         });
         while (it.hasNext()) {
@@ -223,7 +223,7 @@ public class DirectorImpl implements Director {
             if (tmp.containsKey(m.getName())) {
                 Dimension dim = tmp.get(m.getName());
                 dims.put(dim.getId(), dim);
-                it.remove ();
+                it.remove();
             }
         }
     }
@@ -231,8 +231,9 @@ public class DirectorImpl implements Director {
     /**
      * 
      * modify {@link Dimension} group define
+     * 
      * @param dims -- the newest dimensions which update through star model
-     * @param oriDims -- original dimensions 
+     * @param oriDims -- original dimensions
      * @return the newest dimensions map, key is dimension's id
      * 
      */
@@ -241,21 +242,20 @@ public class DirectorImpl implements Director {
         Iterator<Entry<String, Dimension>> it = oriDims.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<String, Dimension> tmpDim = it.next();
-            it.remove ();
+            it.remove();
             Dimension dim = tmpDim.getValue();
             if (dim.getType() == DimensionType.GROUP_DIMENSION) {
                 Iterator<Map.Entry<String, Level>> levelIterator = dim.getLevels().entrySet().iterator();
-                for (;levelIterator.hasNext();) {
+                for (; levelIterator.hasNext();) {
                     Map.Entry<String, Level> tmp = levelIterator.next();
-                    Level value = tmp.getValue ();
-                    String key = value.getFactTableColumn () + "_" 
-                            + value.getDimTable () + "_" +  value.getName ();
+                    Level value = tmp.getValue();
+                    String key = value.getFactTableColumn() + "_" + value.getDimTable() + "_" + value.getName();
                     if (!allLevelIds.contains(key)) {
                         levelIterator.remove();
                     }
                 }
-                if (dim.getLevels ().size () > 0) {
-                    dims.put (dim.getId (), dim);
+                if (dim.getLevels().size() > 0) {
+                    dims.put(dim.getId(), dim);
                 }
             }
         }
@@ -265,6 +265,7 @@ public class DirectorImpl implements Director {
     /**
      * 
      * get all dimensions's levels id list
+     * 
      * @param dims -- dimension instance map
      * @return the set which contains id of dimension's levels
      * @see com.baidu.rigel.biplatform.ac.model.Dimension
@@ -273,10 +274,9 @@ public class DirectorImpl implements Director {
     private Set<String> getAllLevels(Map<String, Dimension> dims) {
         Set<String> levelKeys = new HashSet<String>();
         for (Map.Entry<String, Dimension> dim : dims.entrySet()) {
-            String key = dim.getValue ().getFacttableColumn () + "_" 
-                    + dim.getValue ().getTableName ();
-            dim.getValue ().getLevels ().values ().forEach (level -> {
-                levelKeys.add(key + "_" + level.getName ());
+            String key = dim.getValue().getFacttableColumn() + "_" + dim.getValue().getTableName();
+            dim.getValue().getLevels().values().forEach(level -> {
+                levelKeys.add(key + "_" + level.getName());
             });
         }
         return levelKeys;
@@ -293,12 +293,12 @@ public class DirectorImpl implements Director {
      */
     private Map<String, Dimension> addOrReplaceDims(Map<String, Dimension> oriDims, List<Dimension> buildDims) {
         Map<String, Dimension> dims = new LinkedHashMap<String, Dimension>();
-//        if (oriDims.isEmpty()) {
-//            buildDims.forEach(dim -> {
-//                oriDims.put(dim.getId(), dim);
-//            });
-//                return dims;
-//        }
+        // if (oriDims.isEmpty()) {
+        // buildDims.forEach(dim -> {
+        // oriDims.put(dim.getId(), dim);
+        // });
+        // return dims;
+        // }
         final Map<String, Dimension> dimIdents = new LinkedHashMap<String, Dimension>();
         oriDims.values().forEach(dim -> {
             dimIdents.put(buildDimIdent(dim), dim);
@@ -319,6 +319,7 @@ public class DirectorImpl implements Director {
     /**
      * 
      * generate dimensions's identification through {@link Dimension} instance
+     * 
      * @param dim -- dimension instance
      * @return dimIdent -- dimension identification
      * 
@@ -334,8 +335,8 @@ public class DirectorImpl implements Director {
 
     /**
      * 
-     * update the cube's measures: 
-     *   remove unused measures, add new measures, copy the calculate measures and no changed measures
+     * update the cube's measures: remove unused measures, add new measures, copy the calculate measures and no changed
+     * measures
      * 
      * @param starModel -- star model
      * @param oriCube -- original cube
@@ -352,23 +353,21 @@ public class DirectorImpl implements Director {
         starModel.getDimTables().forEach(dimTable -> {
             refCol.add(dimTable.getReference().getMajorColumn());
         });
-        
+
         final Map<String, String> oriMeasureNameRep = new HashMap<String, String>();
         // remove all the measures which already convert to dimension
-        oriMeasures.values().stream()
-                .filter(oriMeasure -> { 
-                    return !refCol.contains(oriMeasure.getDefine())
-                            && !StringUtils.isEmpty(oriMeasure.getName());
-                }).map(oriMeasure -> {
-                    return oriMeasure.getName() + "&&" + oriMeasure.getId();
-                }).distinct().forEach(str -> {
-                    String[] tmp = str.split("&&");
-                    oriMeasureNameRep.put(tmp[0], tmp[1]);
-                });
+        oriMeasures.values().stream().filter(oriMeasure -> {
+            return !refCol.contains(oriMeasure.getDefine()) && !StringUtils.isEmpty(oriMeasure.getName());
+        }).map(oriMeasure -> {
+            return oriMeasure.getName() + "&&" + oriMeasure.getId();
+        }).distinct().forEach(str -> {
+            String[] tmp = str.split("&&");
+            oriMeasureNameRep.put(tmp[0], tmp[1]);
+        });
 
         final MeasureBuilder measureBuilder = new MeasureBuilder();
         starModel.getFactTable().getColumnList().stream().forEach(col -> {
-                // if true measure already convert to dimension
+            // if true measure already convert to dimension
                 if (!refCol.contains(col.getName()) && !StringUtils.isEmpty(col.getName())) {
                     // old measure
                     if (oriMeasureNameRep.containsKey(col.getName())) {
@@ -382,48 +381,83 @@ public class DirectorImpl implements Director {
             });
         // 同环比、计算列处理
         oriCube.getMeasures().forEach((k, v) -> {
-            if (v instanceof CallbackMeasure) {
+            if (v instanceof CallbackMeasure || v.getType() == MeasureType.SR || v.getType() == MeasureType.RR) {
                 newMeasures.put(v.getId(), v);
             }
-            if (v.getType() == MeasureType.CAL || v.getType() == MeasureType.SR || v.getType() == MeasureType.RR) {
-                ExtendMinicubeMeasure m = (ExtendMinicubeMeasure) v;
-                if (checkRefMeasuer(m.getRefIndNames(), newMeasures)) {
-                    newMeasures.put(v.getId(), v);
+            // if (v.getType() == MeasureType.CAL || v.getType() == MeasureType.SR || v.getType() == MeasureType.RR) {
+                if (v.getType() == MeasureType.CAL) {
+                    ExtendMinicubeMeasure m = (ExtendMinicubeMeasure) v;
+                    // if (checkRefMeasuer(m.getRefIndNames(), newMeasures)) {
+                    // newMeasures.put(v.getId(), v);
+                    // }
+                    if (checkRefMeasuer(m, newMeasures)) {
+                        newMeasures.put(v.getId(), v);
+                    }
                 }
-            }
-        });
-        
+            });
+
         return newMeasures;
     }
-    
+
     /**
-     * 
-     * @param newMeasures 
-     * @param refNames 
-     * @return
+     * 检查计算列的基础指标在指标列表里还存不存在
+     * @param m ExtendMinicubeMeasure
+     * @param newMeasures newMeasures
+     * @return  如果存在，返回true，不存在则返回false；
      */
-    private boolean checkRefMeasuer(Set<String> refNames, Map<String, Measure> newMeasures) {
-        boolean rs = true;
-        if (refNames == null || refNames.size() == 0) {
-            return rs;
+    private boolean checkRefMeasuer(ExtendMinicubeMeasure m, Map<String, Measure> newMeasures) {
+        if(StringUtils.isEmpty(m.getFormula())){
+            return false;
         }
-        String[] measuerNames = newMeasures.values().stream().map(m -> {
-            return m.getName();
-        }).toArray(String[] :: new);
+        Pattern pattern = Pattern.compile("\\$\\{(\\w+)\\}");
+        Matcher matcher = pattern.matcher(m.getFormula());
+        Set<String> baseMeasureSet = Sets.newHashSet();
+        while (matcher.find()) {
+            baseMeasureSet.add(matcher.group(1));
+            logger.info("the MinicubeMeasure :[" + m.getName() + "]'Formula :[" + m.getFormula()
+                    + "] has baseMeasure :[" + matcher.group(1) + "]");
+        }
+        String[] measuerNames = newMeasures.values().stream().map(measure -> {
+            return measure.getName();
+        }).toArray(String[]::new);
         List<String> tmp = Lists.newArrayList();
         Collections.addAll(tmp, measuerNames);
-        for (String ref : refNames) {
+        for (String ref : baseMeasureSet) {
             if (!tmp.contains(ref)) {
                 return false;
             }
         }
-//        for (String str : refNames) {
-//            if (refNames.contains(entry.getKey()) || refNames.contains(entry.getValue().getName())) {
-//                continue;
+        return true;
+    }
+
+//    /**
+//     * 
+//     * @param newMeasures
+//     * @param refNames
+//     * @return
+//     */
+//    private boolean checkRefMeasuer(Set<String> refNames, Map<String, Measure> newMeasures) {
+//        boolean rs = true;
+//        if (refNames == null || refNames.size() == 0) {
+//            return rs;
+//        }
+//        String[] measuerNames = newMeasures.values().stream().map(m -> {
+//            return m.getName();
+//        }).toArray(String[]::new);
+//        List<String> tmp = Lists.newArrayList();
+//        Collections.addAll(tmp, measuerNames);
+//        for (String ref : refNames) {
+//            if (!tmp.contains(ref)) {
+//                return false;
 //            }
 //        }
-        return rs;
-    }
+//        // for (String str : refNames) {
+//        // if (refNames.contains(entry.getKey()) || refNames.contains(entry.getValue().getName())) {
+//        // continue;
+//        // }
+//        // }
+//        return rs;
+//    }
 
     /**
      * 
@@ -453,7 +487,7 @@ public class DirectorImpl implements Director {
         logger.info("create star model with schema successfully");
         return rs.toArray(new StarModel[0]);
     }
-    
+
     /**
      * build cubes({@link Cube}'s Map) with star model({@link StarModel})
      * 
@@ -486,7 +520,7 @@ public class DirectorImpl implements Director {
         logger.info("create cube successfully");
         return cubes;
     }
-    
+
     /**
      * 
      * build {@link Schema} with datasource's id
@@ -508,5 +542,5 @@ public class DirectorImpl implements Director {
         logger.info("transform model to schema successfully " + schema);
         return schema;
     }
-    
+
 }

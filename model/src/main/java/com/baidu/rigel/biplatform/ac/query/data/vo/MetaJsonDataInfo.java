@@ -91,6 +91,12 @@ public class MetaJsonDataInfo implements Serializable {
      * children
      */
     private List<MetaJsonDataInfo> children;
+    
+    /**
+     * hasChildren 当member为 callbackMember时，用来记录callback接口返回的hasChild
+     *
+     */
+    private Boolean hasChildren;
 
     /**
      * json对应数据信息类型
@@ -362,4 +368,20 @@ public class MetaJsonDataInfo implements Serializable {
     public void setChildren(List<MetaJsonDataInfo> children) {
         this.children = children;
     }
+
+    /**
+     * @return the hasChildren
+     */
+    public Boolean getHasChildren() {
+        return hasChildren;
+    }
+
+    /**
+     * @param hasChildren the hasChildren to set
+     */
+    public void setHasChildren(Boolean hasChildren) {
+        this.hasChildren = hasChildren;
+    }
+    
+    
 }

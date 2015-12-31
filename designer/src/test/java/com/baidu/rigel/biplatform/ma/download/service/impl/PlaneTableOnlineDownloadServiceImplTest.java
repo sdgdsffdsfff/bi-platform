@@ -73,7 +73,7 @@ public class PlaneTableOnlineDownloadServiceImplTest {
 
         csvString = downService.downloadTableData(questionModel, logicModel);
 
-        String expectCsvString = "captionDim,captionMeasure\r\n";
+        String expectCsvString = "\tcaptionDim,\tcaptionMeasure\r\n";
         expectCsvString = expectCsvString + "0,0\r\n";
         Assert.assertEquals(expectCsvString, csvString);
         Assert.assertNotNull(csvString);
@@ -82,7 +82,7 @@ public class PlaneTableOnlineDownloadServiceImplTest {
         Map<String, Object> setting = Maps.newHashMap();
         setting.put(Constants.IS_SHOW_ZERO, "true");
         
-        expectCsvString = "captionDim,captionMeasure\r\n";
+        expectCsvString = "\tcaptionDim,\tcaptionMeasure\r\n";
         expectCsvString = expectCsvString + "0,0\r\n";
         
         csvString = downService.downloadTableData(questionModel, logicModel, setting);
@@ -98,8 +98,8 @@ public class PlaneTableOnlineDownloadServiceImplTest {
     private DataModel buildDataModel() {
         DataModel dataModelNew = new DataModel();
         TableData tableData = new TableData();
-        Column columnDim = new Column("test.Dim", "Dim", "captionDim", "test");
-        Column columnMeasure = new Column("test.Measure", "Measure", "captionMeasure", "test");
+        Column columnDim = new Column("test.Dim", "Dim", "captionDim", "varchar", "test");
+        Column columnMeasure = new Column("test.Measure", "Measure", "captionMeasure", "varchar", "test");
         List<Column> columns = Lists.newArrayList();
         columns.add(columnDim);
         columns.add(columnMeasure);

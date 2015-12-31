@@ -157,8 +157,8 @@ public class RedisCacheLock implements Lock {
                         connection.exec();
                         forReturn = true;
                     }
-                    LOG.info(STRING_SERIALIZER.deserialize(cacheLockBytes) + " is exists? " + exists
-                            + " the forReturn is  :" + forReturn);
+//                    LOG.info(STRING_SERIALIZER.deserialize(cacheLockBytes) + " is exists? " + exists
+//                            + " the forReturn is  :" + forReturn);
                     return forReturn;
                 }
             });

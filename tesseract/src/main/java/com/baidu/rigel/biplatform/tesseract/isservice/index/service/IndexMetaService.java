@@ -39,11 +39,11 @@ public interface IndexMetaService {
      * 
      * @param cubeList
      *            cube数据
-     * @param dataSourceInfo
+     * @param dataSourceInfoList
      *            数据源信息
      * @return List<IndexMeta> 初始化后的索引元数据,初始化不成功返回空集，不会返回null
      */
-    List<IndexMeta> initMiniCubeIndexMeta(List<Cube> cubeList, DataSourceInfo dataSourceInfo);
+    List<IndexMeta> initMiniCubeIndexMeta(List<Cube> cubeList, List<DataSourceInfo> dataSourceInfoList);
     
     /**
      * 

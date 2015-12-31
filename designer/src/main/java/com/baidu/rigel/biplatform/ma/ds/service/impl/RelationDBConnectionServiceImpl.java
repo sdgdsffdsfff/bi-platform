@@ -3,19 +3,24 @@ package com.baidu.rigel.biplatform.ma.ds.service.impl;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
+import com.baidu.rigel.biplatform.ac.query.data.DataSourceInfo;
 import com.baidu.rigel.biplatform.ac.query.data.impl.SqlDataSourceInfo;
 import com.baidu.rigel.biplatform.ac.query.data.impl.SqlDataSourceInfo.DataBase;
 import com.baidu.rigel.biplatform.ac.util.AesUtil;
+import com.baidu.rigel.biplatform.ac.util.PropertiesFileUtils;
 import com.baidu.rigel.biplatform.ma.ds.exception.DataSourceConnectionException;
 import com.baidu.rigel.biplatform.ma.ds.service.DataSourceConnectionService;
 import com.baidu.rigel.biplatform.ma.model.ds.DataSourceDefine;
+import com.baidu.rigel.biplatform.ma.model.ds.DataSourceGroupDefine;
 import com.baidu.rigel.biplatform.ma.model.ds.DataSourceType;
+import com.baidu.rigel.biplatform.ma.report.utils.ContextManager;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 /**
@@ -93,7 +98,8 @@ public class RelationDBConnectionServiceImpl implements
         String connUrl = type.getPrefix() + ds.getHostAndPort() + type.getDiv() + ds.getDbInstance();
         if (StringUtils.hasText(ds.getEncoding())) {
             if (type == DataSourceType.MYSQL || type == DataSourceType.MYSQL_DBPROXY) {
-                connUrl = connUrl + "?useUniCode=true&characterEncoding=" + ds.getEncoding();
+                connUrl = connUrl + "?useUniCode=true&characterEncoding=" + ds.getEncoding()
+                        + "&zeroDateTimeBehavior=convertToNull&noAccessToProcedureBodies=true";
             }
         }
         LOG.debug("Conn URL: " + connUrl);
@@ -144,7 +150,13 @@ public class RelationDBConnectionServiceImpl implements
         dsInfo.setProductLine(ds.getProductLine());
         dsInfo.setInstanceName(ds.getDbInstance());
 //        dsInfo.setDataSourceKey(dsDefine.getName());
-        dsInfo.setDBProxy(true);
+        if (ds.getDataSourceType() != null
+                && ds.getDataSourceType().equals(DataSourceType.MYSQL_DBPROXY)) {
+            dsInfo.setDBProxy(true);
+        } else {
+            dsInfo.setDBProxy(false);
+        }
+        
         List<String> urls = Lists.newArrayList();
         urls.add(this.getDataSourceConnUrl(ds));
         dsInfo.setJdbcUrls(urls);
@@ -167,6 +179,8 @@ public class RelationDBConnectionServiceImpl implements
                 return DataBase.MYSQL;
             case PALO:
                 return DataBase.PALO;
+            case DRUID:
+                return DataBase.DRUID;
             case ORACLE:
                 return DataBase.ORACLE;
             case H2:
@@ -174,6 +188,44 @@ public class RelationDBConnectionServiceImpl implements
             default:
                 return DataBase.OTHER;
         }
+    }
+    
+    @Override
+    public List<DataSourceInfo> getActivedDataSourceInfoList(
+            DataSourceGroupDefine dataSourceGroupDefine, String securityKey) throws DataSourceConnectionException {
+        // TODO Auto-generated method stub
+        List<DataSourceInfo> dsInfoList = new ArrayList<DataSourceInfo>();
+        DataSourceDefine dsDefineDefaultActived = dataSourceGroupDefine.getActiveDataSource();
+        DataSourceInfo dsInfoActived = this.parseToDataSourceInfo(dsDefineDefaultActived, securityKey);
+        // 添加数据源组中默认激活的数据源
+        dsInfoList.add(dsInfoActived);
+        String confActiveDs = null;
+        try {
+            confActiveDs = PropertiesFileUtils.getPropertiesKey("activeds", ContextManager.getProductLine()
+                    + "." + dataSourceGroupDefine.getName());
+        } catch (Exception e) {
+            LOG.warn("properties file read occur error. msg:{}", e.getMessage());
+        }
+
+        if (!StringUtils.isEmpty(confActiveDs)) {
+            String[] confDsNames = confActiveDs.split(",");
+            for (String confDsNameTmp : confDsNames) {
+                for (DataSourceDefine dataSourceDefine : dataSourceGroupDefine.getDataSourceList()
+                        .values()) {
+                    if (confDsNameTmp.equals(dataSourceDefine.getName()) 
+                            // 判断是否为配置文件的数据源为数据源组中的数据源
+                            // 判断激活的数据源不为配置文件里面的数据源，所以在if里面不添加默认的数据源
+                            && !dsDefineDefaultActived.getName().equals(dataSourceDefine.getName())) {
+                        DataSourceInfo dsInfoTmp = this.parseToDataSourceInfo(dataSourceDefine,
+                                securityKey);
+                        // 此地方只添加数据组中的properties中配置的数据源信息，并除数据源默认激活的数据源，因为在上面的代码中添加了
+                        dsInfoList.add(dsInfoTmp);
+                        break;
+                    }
+                }
+            }
+        }
+        return dsInfoList;
     }
 
 }

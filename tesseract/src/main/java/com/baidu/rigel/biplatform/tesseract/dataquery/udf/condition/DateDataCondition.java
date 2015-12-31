@@ -50,6 +50,7 @@ import com.baidu.rigel.biplatform.tesseract.model.MemberNodeTree;
 import com.baidu.rigel.biplatform.tesseract.qsservice.query.QueryContextBuilder;
 import com.baidu.rigel.biplatform.tesseract.qsservice.query.vo.QueryContext;
 import com.google.common.collect.Lists;
+
 /**
  * 
  *Description: 日期偏移条件
@@ -191,8 +192,8 @@ public class DateDataCondition implements Condition {
         DimensionCondition tmp = (DimensionCondition) condition;
         List<QueryData> queryDatas = Lists.newArrayList();
         final boolean hasQueryNodeDatas = CollectionUtils.isEmpty(tmp.getQueryDataNodes());
-        boolean isExpand = hasQueryNodeDatas? false : tmp.getQueryDataNodes().get(0).isExpand();
-        boolean isShow = hasQueryNodeDatas? false : tmp.getQueryDataNodes().get(0).isShow();
+        boolean isExpand = hasQueryNodeDatas ? false : tmp.getQueryDataNodes().get(0).isExpand();
+        boolean isShow = hasQueryNodeDatas ? false : tmp.getQueryDataNodes().get(0).isShow();
         for (int i = 0; i < days.length; ++i) {
             QueryData data = new QueryData("[" + dimension.getName() + "].[" + days[i] + "]");
             data.setExpand(isExpand);

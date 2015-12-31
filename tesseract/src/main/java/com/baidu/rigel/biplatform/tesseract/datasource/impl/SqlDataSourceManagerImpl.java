@@ -164,15 +164,26 @@ public class SqlDataSourceManagerImpl implements DataSourceManager {
         if (StringUtils.isBlank(key)) {
             throw new IllegalArgumentException("can not get datasource by empty key!");
         }
+        long curr = System.currentTimeMillis();
         DynamicSqlDataSource dynamicDataSource = dynamicDataSources.get(key);
+        log.info("dataSourceManager.getDataSourceByKey cost: "
+                + (System.currentTimeMillis() - curr) + " ms to get key");
+        curr = System.currentTimeMillis();
         if (dynamicDataSource == null) {
             throw new DataSourceException("can not found datasource by key:" + key);
         }
         SqlDataSourceWrap dataSource = null;
         try {
             dataSource = dynamicDataSource.getDataSource();
+            log.info("dataSourceManager.getDataSourceByKey cost: "
+                    + (System.currentTimeMillis() - curr) + " ms to dynamicDataSource.getDataSource");
+            curr = System.currentTimeMillis();
             // 设置最新成功获取时间戳
             dynamicDataSource.setLastSuccessGetDataSourcTime(System.currentTimeMillis());
+            log.info("dataSourceManager.getDataSourceByKey cost: "
+                    + (System.currentTimeMillis() - curr)
+                    + " ms to dynamicDataSource.setLastSuccessGetDataSourcTime");
+            curr = System.currentTimeMillis();
         } catch (Exception e) {
             log.warn("get datasource error", e);
             throw new DataSourceException("get datasource error,msg:" + e.getMessage(), e);

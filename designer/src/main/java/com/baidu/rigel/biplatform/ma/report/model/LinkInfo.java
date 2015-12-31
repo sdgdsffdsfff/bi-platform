@@ -16,6 +16,14 @@ public class LinkInfo implements Serializable {
      */
     private static final long serialVersionUID = 4146274201672309214L;
     /**
+     * 跳转列源id
+     */
+    private String colunmSourceId;
+    /**
+     * 跳转列源名称
+     */
+    private String colunmSourceCaption;
+    /**
      * 跳转到的平面报表id
      */
     private String planeTableId;
@@ -51,5 +59,35 @@ public class LinkInfo implements Serializable {
     public void setParamMapping(Map<String, String> paramMapping) {
         this.paramMapping = paramMapping;
     }
+
+    /**
+     * @return the colunmSourceId
+     */
+    public String getColunmSourceId() {
+        return colunmSourceId;
+    }
+
+    /**
+     * @param colunmSourceId the colunmSourceId to set
+     */
+    public void setColunmSourceId(String colunmSourceId) {
+        this.colunmSourceId = colunmSourceId;
+    }
+
+    /**
+     * @return the colunmSourceCaption
+     */
+    public String getColunmSourceCaption() {
+        return colunmSourceCaption;
+    }
+
+    /**
+     * @param colunmSourceCaption the colunmSourceCaption to set
+     */
+    public void setColunmSourceCaption(String colunmSourceCaption) {
+        this.colunmSourceCaption = colunmSourceCaption;
+    }
+
+    
 
 }

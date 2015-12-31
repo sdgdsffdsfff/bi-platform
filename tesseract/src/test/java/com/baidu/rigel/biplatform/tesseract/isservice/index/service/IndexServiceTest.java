@@ -76,9 +76,11 @@ public class IndexServiceTest extends IndexTestBase {
     public void testInitMiniCubeIndexWithNull() throws IndexAndSearchException {
         List<Cube> cubeList = null;
         DataSourceInfo dataSourceInfo = null;
+        List<DataSourceInfo> dataSourceInfoList = new ArrayList<DataSourceInfo>();
+        dataSourceInfoList.add(dataSourceInfo);
         Mockito.when(this.indexMetaService.initMiniCubeIndexMeta(Mockito.anyList(), Mockito.any())).thenReturn(new ArrayList<IndexMeta>());
         boolean result = this.indexService
-            .initMiniCubeIndex(cubeList, dataSourceInfo, false, false);
+            .initMiniCubeIndex(cubeList, dataSourceInfoList, false, false);
         Assert.assertFalse(result);
         List<IndexMeta>  mockIndexMetaList=new ArrayList<IndexMeta>();
         IndexMeta idxMeta=new IndexMeta();
@@ -86,7 +88,7 @@ public class IndexServiceTest extends IndexTestBase {
         Mockito.when(this.indexMetaService.initMiniCubeIndexMeta(Mockito.anyList(), Mockito.any())).thenReturn(mockIndexMetaList);
         Mockito.when(this.indexMetaService.mergeIndexMeta(Mockito.any())).thenReturn(idxMeta);
         result = this.indexService
-            .initMiniCubeIndex(cubeList, dataSourceInfo, false, false);
+            .initMiniCubeIndex(cubeList, dataSourceInfoList, false, false);
         Assert.assertTrue(result);
         
     }
@@ -103,10 +105,13 @@ public class IndexServiceTest extends IndexTestBase {
     	ConfigQuestionModel question=this.mockQuestion();         
         List<Cube> cubes = new ArrayList<Cube>();
         cubes.add(question.getCube());
+        List<DataSourceInfo> dataSourceInfoList = new ArrayList<DataSourceInfo>();
+        dataSourceInfoList.add(question.getDataSourceInfo());
         List<IndexMeta> mockIndexMetaList=this.mockIndexMeta(question);
         Mockito.when(this.indexMetaService.initMiniCubeIndexMeta(Mockito.anyList(), Mockito.any())).thenReturn(mockIndexMetaList);
         Mockito.when(this.indexMetaService.mergeIndexMeta(Mockito.any())).thenReturn(mockIndexMetaList.get(0));
-        boolean result=this.indexService.initMiniCubeIndex(cubes, question.getDataSourceInfo(), false, false);
+        boolean result = this.indexService.initMiniCubeIndex(cubes, dataSourceInfoList, false,
+                false);
         Assert.assertTrue(result);
         
         //doIndex
@@ -142,7 +147,7 @@ public class IndexServiceTest extends IndexTestBase {
         Mockito.when(this.indexConfig.getShardReplicaNum()).thenReturn(1);
         
         
-        result=this.indexService.initMiniCubeIndex(cubes, question.getDataSourceInfo(), true, false);
+        result = this.indexService.initMiniCubeIndex(cubes, dataSourceInfoList, true, false);
         Assert.assertTrue(result);
         
     }
@@ -158,11 +163,14 @@ public class IndexServiceTest extends IndexTestBase {
     	ConfigQuestionModel question=this.mockQuestion();         
         List<Cube> cubes = new ArrayList<Cube>();
         cubes.add(question.getCube());
+        List<DataSourceInfo> dataSourceInfoList = new ArrayList<DataSourceInfo>();
+        dataSourceInfoList.add(question.getDataSourceInfo());
         List<IndexMeta> mockIndexMetaList=this.mockIndexMeta(question);
         Mockito.when(this.indexMetaService.initMiniCubeIndexMeta(Mockito.anyList(), Mockito.any())).thenReturn(mockIndexMetaList);
         mockIndexMetaList.get(0).setIdxState(IndexState.INDEX_AVAILABLE_MERGE);
         Mockito.when(this.indexMetaService.mergeIndexMeta(Mockito.any())).thenReturn(mockIndexMetaList.get(0));
-        boolean result=this.indexService.initMiniCubeIndex(cubes, question.getDataSourceInfo(), true, false);
+        boolean result = this.indexService
+                .initMiniCubeIndex(cubes, dataSourceInfoList, true, false);
         Assert.assertTrue(result);
         
     }
@@ -178,6 +186,8 @@ public class IndexServiceTest extends IndexTestBase {
     	ConfigQuestionModel question=this.mockQuestion();         
         List<Cube> cubes = new ArrayList<Cube>();
         cubes.add(question.getCube());
+        List<DataSourceInfo> dataSourceInfoList = new ArrayList<DataSourceInfo>();
+        dataSourceInfoList.add(question.getDataSourceInfo());
         List<IndexMeta> mockIndexMetaList=this.mockIndexMeta(question);
         Mockito.when(this.indexMetaService.initMiniCubeIndexMeta(Mockito.anyList(), Mockito.any())).thenReturn(mockIndexMetaList);
         IndexMeta idxMeta=mockIndexMetaList.get(0);
@@ -216,7 +226,7 @@ public class IndexServiceTest extends IndexTestBase {
         //-writeindex
         Mockito.when(this.isNodeService.getNodeByNodeKey(Mockito.anyString(), Mockito.anyString(), Mockito.anyBoolean())).thenReturn(this.mockNode());
         
-        IndexShard idxShard=idxMeta.getIdxShardList().get(0);
+        IndexShard idxShard = idxMeta.getIdxShardList().get(0);
         IndexDataResultSet data=this.mockIndexDataResultSet();
         data.getDataList().clear();
         IndexMessage message=this.mockIndexMessage(idxShard, data, this.mockNode());
@@ -228,7 +238,8 @@ public class IndexServiceTest extends IndexTestBase {
         
         
         
-        boolean result=this.indexService.initMiniCubeIndex(cubes, question.getDataSourceInfo(), true, false);
+        boolean result = this.indexService
+                .initMiniCubeIndex(cubes, dataSourceInfoList, true, false);
         Assert.assertTrue(result);
         
        
@@ -245,6 +256,8 @@ public class IndexServiceTest extends IndexTestBase {
     	ConfigQuestionModel question=this.mockQuestion();         
         List<Cube> cubes = new ArrayList<Cube>();
         cubes.add(question.getCube());
+        List<DataSourceInfo> dataSourceInfoList = new ArrayList<DataSourceInfo>();
+        dataSourceInfoList.add(question.getDataSourceInfo());
         List<IndexMeta> mockIndexMetaList=this.mockIndexMeta(question);
         Mockito.when(this.indexMetaService.initMiniCubeIndexMeta(Mockito.anyList(), Mockito.any())).thenReturn(mockIndexMetaList);
         IndexMeta idxMeta=mockIndexMetaList.get(0);
@@ -264,7 +277,8 @@ public class IndexServiceTest extends IndexTestBase {
         //-checkIndexMetaBeforeIndex
         Mockito.when(this.indexMetaService.getIndexMetaByIndexMetaId(Mockito.anyString(), Mockito.anyString())).thenReturn(idxMeta);
         Mockito.when(this.indexMetaService.saveOrUpdateIndexMeta(Mockito.any())).thenReturn(Boolean.TRUE);       
-        boolean result=this.indexService.initMiniCubeIndex(cubes, question.getDataSourceInfo(), true, false);
+        boolean result = this.indexService
+                .initMiniCubeIndex(cubes, dataSourceInfoList, true, false);
         Assert.assertFalse(result);
         
     }

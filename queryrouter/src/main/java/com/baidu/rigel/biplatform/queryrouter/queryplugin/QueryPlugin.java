@@ -17,7 +17,7 @@ package com.baidu.rigel.biplatform.queryrouter.queryplugin;
 
 import com.baidu.rigel.biplatform.ac.query.data.DataModel;
 import com.baidu.rigel.biplatform.ac.query.model.QuestionModel;
-import com.baidu.rigel.biplatform.queryrouter.queryplugin.plugins.model.QuestionModelTransformationException;
+import com.baidu.rigel.biplatform.queryrouter.queryplugin.sql.model.QuestionModelTransformationException;
 
 /**
  *
@@ -38,5 +38,16 @@ public interface QueryPlugin {
      *
      */
     DataModel query(QuestionModel questionModel) throws QuestionModelTransformationException;
+    
+    /**
+     *
+     * 判断是否匹配
+     * 
+     * @param QuestionModel
+     *            问题模型
+     * @return boolean true匹配成功，false不匹配
+     *
+     */
+    boolean isSuitable(QuestionModel questionModel) throws QuestionModelTransformationException;
     
 }

@@ -17,14 +17,17 @@ package com.baidu.rigel.biplatform.ma.ds.service.impl;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Resource;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,11 +36,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.SerializationUtils;
 
 import com.baidu.rigel.biplatform.ac.util.AesUtil;
+import com.baidu.rigel.biplatform.ac.util.PropertiesFileUtils;
 import com.baidu.rigel.biplatform.api.client.service.FileService;
 import com.baidu.rigel.biplatform.api.client.service.FileServiceException;
 import com.baidu.rigel.biplatform.ma.ds.exception.DataSourceOperationException;
 import com.baidu.rigel.biplatform.ma.ds.service.DataSourceConnectionService;
 import com.baidu.rigel.biplatform.ma.ds.service.DataSourceConnectionServiceFactory;
+import com.baidu.rigel.biplatform.ma.ds.service.DataSourceGroupService;
 import com.baidu.rigel.biplatform.ma.ds.service.DataSourceService;
 import com.baidu.rigel.biplatform.ma.model.ds.DataSourceDefine;
 import com.baidu.rigel.biplatform.ma.model.ds.DataSourceGroupDefine;
@@ -66,6 +71,9 @@ public class DataSourceServiceImpl implements DataSourceService {
     
     @Value("${biplatform.ma.ds.location}")
     private String dsFileBaseDir;
+    
+    @Resource
+    private DataSourceGroupService dataSourceGroupService;
     
     /**
      * 构造函数
@@ -280,6 +288,65 @@ public class DataSourceServiceImpl implements DataSourceService {
             logger.error("error : " + e.getMessage());
             throw new DataSourceOperationException("未找到正确的数据源定义信息", e);
         }
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public DataSourceDefine getDsDefine(String queryDsId,
+            @SuppressWarnings("rawtypes") Map requestParams) throws DataSourceOperationException {
+        PropertiesFileUtils.readPropertiesFile();
+        if (MapUtils.isNotEmpty(requestParams)
+                && requestParams.get("activeds") != null) {
+            // activeds 的格式为：  activeds=datasourceGroupA.datasourceA datasourceGroupA为数据源组名称，datasourceA数据源名称
+            String productLine = ContextManager.getProductLine();
+            try {
+                String dsg = URLDecoder.decode(requestParams.get("activeds").toString(), "UTF-8");
+                String[] requestDsgNames = StringUtils.split(dsg, ".");
+                if (requestDsgNames.length == 2 
+                        && StringUtils.isNotEmpty(requestDsgNames[0])
+                        && StringUtils.isNotEmpty(requestDsgNames[1])) {
+                    DataSourceGroupDefine dataSourceGroupDefine = dataSourceGroupService
+                            .getDataSourceGroupDefine(productLine, requestDsgNames[0]);
+                    if (dataSourceGroupDefine != null) {
+                        String propertiesKey = productLine + "." + requestDsgNames[0];
+                        String propertiesDs = PropertiesFileUtils.getPropertiesKey("activeds", propertiesKey);
+                        logger.info("activeds properties:{}.",
+                                PropertiesFileUtils.getPropertiesKey("activeds", propertiesKey));
+                        if (StringUtils.isEmpty(propertiesDs)) {
+                            logger.info("can not found required propertiesKey:{} in properties:{}, System will"
+                                    + "select the default conf.", propertiesKey,
+                                    PropertiesFileUtils.getPropertiesKey("activeds", propertiesKey));
+                            return this.getDsDefine(queryDsId);
+                        }
+                        String[] dsNames = StringUtils.split(propertiesDs, ",");
+                        logger.info("properties:{}.",
+                                PropertiesFileUtils.getPropertiesKey("activeds", propertiesKey));
+                        for (String key : dsNames){
+                            for (DataSourceDefine dataSourceDefine : dataSourceGroupDefine
+                                    .getDataSourceList().values()) {
+                                if (requestDsgNames[1].equals(dataSourceDefine.getName())
+                                        && key.equals(requestDsgNames[1])) {
+                                    // 如果找到此数据源那么使用此数据源key
+                                    logger.info("url datasource activeds:{}, change using datasourceGroup:{} datasource：{}.",
+                                            requestParams.get("activeds").toString(), requestDsgNames[0], requestDsgNames[1]);
+                                    return dataSourceDefine;
+                                }
+                            }
+                        };
+                    }
+                }
+                logger.warn("requested url datasource activeds:{}, not changed.pls check requestParam:‘activeds’",
+                            requestParams.get("activeds").toString());
+                
+            } catch (UnsupportedEncodingException e) {
+                logger.error("url parameters 'activeds' is not well formed. activeds:{}, system continue to choose default ds.",
+                        requestParams.get("activeds").toString());
+                e.printStackTrace();
+            }
+        }
+        return this.getDsDefine(queryDsId);
     }
     
     /**

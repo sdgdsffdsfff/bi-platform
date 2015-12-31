@@ -20,6 +20,7 @@ package com.baidu.rigel.biplatform.tesseract.isservice.search.service.impl;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -118,6 +119,26 @@ public class SearchIndexServiceImpl implements SearchService {
         super();
         this.isClient = IndexAndSearchClient.getNodeClient();
     }
+    
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.baidu.rigel.biplatform.tesseract.isservice.search.service.SearchService
+     * #hasIndexMeta(com.baidu.rigel.biplatform.tesseract.qsservice.query.vo.
+     * QueryRequest)
+     */
+    public boolean hasIndexMeta(QueryRequest query) {
+        if (query == null || StringUtils.isEmpty(query.getCubeId())) {
+            LOGGER.error(String.format(LogInfoConstants.INFO_PATTERN_FUNCTION_EXCEPTION, "query",
+                    "[query:" + query + "]"));
+            throw new IllegalArgumentException();
+        }
+        IndexMeta idxMeta = idxMetaService.getIndexMetaByCubeId(query.getCubeId(), query
+                .getDataSourceInfo().getDataSourceKey());
+        
+        return !this.queryUseDatabase(query, idxMeta);
+    }
 
     /*
      * (non-Javadoc)
@@ -135,7 +156,6 @@ public class SearchIndexServiceImpl implements SearchService {
         // 5. do search
         // 6. merge result
         // 7. return
-
         if (query == null || StringUtils.isEmpty(query.getCubeId())) {
             LOGGER.error(String.format(LogInfoConstants.INFO_PATTERN_FUNCTION_EXCEPTION, "query", "[query:" + query + "]"));
             throw new IndexAndSearchException(getExceptionMessage (),
@@ -231,26 +251,24 @@ public class SearchIndexServiceImpl implements SearchService {
     }
     
 	private boolean shardFitQuery(IndexShard idxShard, QueryRequest query) {
-		boolean result = false;
-		if (StringUtils.isEmpty(idxShard.getShardDimBase())) {
-			result = true;
-		} else {
+		boolean result = true;
+		if (!StringUtils.isEmpty(idxShard.getShardDimBase())) {			
 			if (query != null && query.getWhere() != null
 					&& !CollectionUtils.isEmpty(query.getWhere().getAndList())) {
-				for (Expression ex : query.getWhere().getAndList()) {
-					if (ex.getProperties().equals(idxShard.getShardDimBase())
-							&& !CollectionUtils.isEmpty(ex.getQueryValues())) {
-						for (QueryObject qo : ex.getQueryValues()) {
-							if (!CollectionUtils.isEmpty(CollectionUtils
-									.intersection(
-											idxShard.getShardDimValueSet(),
-											qo.getLeafValues()))) {
-								result = true;
-								break;
-							}
-						}
-					}
-				}
+                for (Expression ex : query.getWhere().getAndList()) {
+                    if (ex.getProperties().equals(idxShard.getShardDimBase())
+                        && !CollectionUtils.isEmpty(ex.getQueryValues())) {
+                        Set<String> currLeafValues = new HashSet<String>();                        
+                        for (QueryObject qo : ex.getQueryValues()) {
+                            currLeafValues.addAll(qo.getLeafValues());
+                        }
+                        if (CollectionUtils.isEmpty(CollectionUtils.intersection(
+                            idxShard.getShardDimValueSet(), currLeafValues))) {
+                            result = false;
+                            break;
+                        }
+                    }
+                }
 			}
 		}
 		return result;
@@ -383,7 +401,8 @@ public class SearchIndexServiceImpl implements SearchService {
     private boolean queryUseDatabase(QueryRequest query, IndexMeta idxMeta) {
         return idxMeta == null
                 || idxMeta.getIdxState().equals(IndexState.INDEX_UNAVAILABLE)
-                || idxMeta.getIdxState().equals(IndexState.INDEX_UNINIT)
+                || idxMeta.getIdxState().equals(IndexState.INDEX_UNINIT) 
+                || CollectionUtils.isEmpty(idxMeta.getIdxShardList()) 
                 || !query.isUseIndex()
                 || (query.getFrom() != null && query.getFrom().getFrom() != null && !idxMeta.getDataDescInfo()
                         .getTableNameList().contains(query.getFrom().getFrom()))

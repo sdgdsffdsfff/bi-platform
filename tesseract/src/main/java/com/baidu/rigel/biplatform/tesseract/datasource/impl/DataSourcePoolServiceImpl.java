@@ -18,8 +18,11 @@
  */
 package com.baidu.rigel.biplatform.tesseract.datasource.impl;
 
+import java.util.List;
+
 import javax.annotation.Resource;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.cache.Cache;
 import org.springframework.stereotype.Service;
@@ -58,6 +61,23 @@ public class DataSourcePoolServiceImpl implements DataSourcePoolService {
         dsInfoCache.put(dataSourceInfo.getDataSourceKey(), dataSourceInfo);
         // 实际不会马上初始化数据源，只会在需要时候才加载数据源到内存
 
+    }
+    
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.baidu.rigel.biplatform.tesseract.datasource.DataSourcePoolService
+     * #initDataSourceInfoList(java.util.List)
+     */
+    @Override
+    public void initDataSourceInfoList(List<DataSourceInfo> dataSourceInfoList)
+            throws DataSourceException {
+        if (!CollectionUtils.isEmpty(dataSourceInfoList)) {
+            for (DataSourceInfo dataSourceInfo : dataSourceInfoList) {
+                initDataSourceInfo(dataSourceInfo);
+            }
+        }
     }
 
     /*
@@ -112,11 +132,20 @@ public class DataSourcePoolServiceImpl implements DataSourcePoolService {
 
     @Override
     public DataSourceWrap getDataSourceByKey(DataSourceInfo dataSourceInfo) throws DataSourceException {
+        long curr = System.currentTimeMillis();
         DataSourceManager dataSourceManager = DataSourceManagerFactory.getDataSourceManagerInstance(dataSourceInfo);
+        LOG.info("getDataSource cost:" + (System.currentTimeMillis() - curr)
+                + " to getDataSourceManagerInstance");
+        curr = System.currentTimeMillis();
         // 每次调用init，init自动判断是否初始化过
         dataSourceManager.initDataSource(dataSourceInfo);
-
-        return dataSourceManager.getDataSourceByKey(dataSourceInfo.getDataSourceKey());
+        LOG.info("getDataSource cost:" + (System.currentTimeMillis() - curr)
+                + " to dataSourceManager.initDataSource");
+        curr = System.currentTimeMillis();
+        DataSourceWrap result = dataSourceManager.getDataSourceByKey(dataSourceInfo.getDataSourceKey());
+        LOG.info("getDataSource cost:" + (System.currentTimeMillis() - curr)
+                + " to dataSourceManager.getDataSourceByKey");
+        return result;
     }
 
 }

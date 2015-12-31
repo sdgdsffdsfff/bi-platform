@@ -22,111 +22,110 @@ import java.util.Map;
 import com.google.common.collect.Maps;
 
 /**
- * 扩展区域定义： 扩展区域指报表中的一片数据区域。数据区域中可能是 报表、图、部件等，
- * 我们可以认为一张报表由扩展区域组成。每一扩展区域包含区域的定义信息（逻辑模型） 参数信息（参数定义）格式样式信息（格式模型）以及扩展区域类型。
+ * 扩展区域定义： 扩展区域指报表中的一片数据区域。数据区域中可能是 报表、图、部件等， 我们可以认为一张报表由扩展区域组成。每一扩展区域包含区域的定义信息（逻辑模型） 参数信息（参数定义）格式样式信息（格式模型）以及扩展区域类型。
  * 通常一种扩展区域类型对应一类数据模型（待验证）
  * 
  * @author david.wang
  *
  */
 public class ExtendArea implements Serializable {
-    
+
     /**
      * serialize id
      */
     private static final long serialVersionUID = -2067586365024353351L;
-    
+
     /**
      * id
      * 
      */
     private String id;
-    
+
     /**
      * cube id
      */
     private String cubeId;
-    
+
     /**
      * 逻辑模型定义
      */
     private LogicModel logicModel;
-    
+
     /**
      * 引用区域的ID
      */
     private String referenceAreaId;
-    
+
     /**
      * 类型定义
      */
     private ExtendAreaType type = ExtendAreaType.TABLE;
-    
+
     /**
      * TODO 扩展区域包含的部件
      */
     private Widget widget;
-    
+
     /**
      * 数据格式定义
      */
     private FormatModel formatModel = new FormatModel();
-    
+
     /**
      * 图形属性设置
      */
     private ChartFormatModel chartFormatModel = new ChartFormatModel();
-    
+
     /**
      * 平面表样式信息
      */
     private PlaneTableFormat planeTableFormat = new PlaneTableFormat();
-    
+
     /**
      * 表格的其他个性化配置，如是否过滤空白行等
      */
     private Map<String, Object> otherSetting = Maps.newHashMap();
-    
+
     public String getId() {
         return id;
     }
-    
+
     public void setId(String id) {
         this.id = id;
     }
-    
+
     public LogicModel getLogicModel() {
         return logicModel;
     }
-    
+
     public void setLogicModel(LogicModel logicModel) {
         this.logicModel = logicModel;
     }
-    
+
     public ExtendAreaType getType() {
         return type;
     }
-    
+
     public void setType(ExtendAreaType type) {
         this.type = type;
     }
-    
+
     public Widget getWidget() {
         return widget;
     }
-    
+
     public void setWidget(Widget widget) {
         this.widget = widget;
     }
-    
+
     public String getCubeId() {
         return cubeId;
     }
-    
+
     public void setCubeId(String cubeId) {
         this.cubeId = cubeId;
     }
-    
+
     /**
      * 获取所有条目定义
      * 
@@ -134,12 +133,11 @@ public class ExtendArea implements Serializable {
      */
     public Map<String, Item> listAllItems() {
         Map<String, Item> allItems = new HashMap<String, Item>();
-        
-        
+
         if (this.logicModel == null) {
             return allItems;
         }
-        
+
         if (this.getType() == ExtendAreaType.TIME_COMP) {
             if (((TimerAreaLogicModel) getLogicModel()).getTimeDimensions() == null) {
                 return allItems;
@@ -159,18 +157,18 @@ public class ExtendArea implements Serializable {
             allItems.put(item.getOlapElementId(), item);
         }
         logicModel.getSelectionMeasures().values().forEach(item -> {
-                if (!allItems.containsKey(item.getOlapElementId())) {
-                    allItems.put(item.getOlapElementId(), item);
-                }
+            if (!allItems.containsKey(item.getOlapElementId())) {
+                allItems.put(item.getOlapElementId(), item);
+            }
         });
         logicModel.getSelectionDims().values().forEach(item -> {
-                if (!allItems.containsKey(item.getOlapElementId())) {
-                    allItems.put(item.getOlapElementId(), item);
-                }
-            });
+            if (!allItems.containsKey(item.getOlapElementId())) {
+                allItems.put(item.getOlapElementId(), item);
+            }
+        });
         return allItems;
     }
-    
+
     /**
      * get the referenceAreaId
      * 
@@ -179,12 +177,11 @@ public class ExtendArea implements Serializable {
     public String getReferenceAreaId() {
         return referenceAreaId;
     }
-    
+
     /**
      * set the referenceAreaId
      * 
-     * @param referenceAreaId
-     *            the referenceAreaId to set
+     * @param referenceAreaId the referenceAreaId to set
      */
     public void setReferenceAreaId(String referenceAreaId) {
         this.referenceAreaId = referenceAreaId;
@@ -203,7 +200,7 @@ public class ExtendArea implements Serializable {
         logicModel.removeRow(olapElementId);
         logicModel.removeSlice(olapElementId);
     }
-    
+
     public Item getItem(String itemId) {
         return this.logicModel.getItem(itemId);
     }
@@ -237,7 +234,7 @@ public class ExtendArea implements Serializable {
         if (this.logicModel == null) {
             this.logicModel = new LogicModel();
         }
-        this.logicModel.getSelectionDims().put(item.getOlapElementId(), item);        
+        this.logicModel.getSelectionDims().put(item.getOlapElementId(), item);
     }
 
     /**
@@ -281,7 +278,7 @@ public class ExtendArea implements Serializable {
      */
     public ChartFormatModel getChartFormatModel() {
         if (this.chartFormatModel == null) {
-            this.chartFormatModel = new ChartFormatModel ();
+            this.chartFormatModel = new ChartFormatModel();
         }
         return chartFormatModel;
     }
@@ -293,29 +290,63 @@ public class ExtendArea implements Serializable {
         this.chartFormatModel = chartFormatModel;
     }
 
-    
-    /** 
-     * 获取 planeTableFormat 
-     * @return the planeTableFormat 
+    /**
+     * 获取 planeTableFormat
+     * 
+     * @return the planeTableFormat
      */
     public PlaneTableFormat getPlaneTableFormat() {
         if (this.planeTableFormat == null) {
             this.planeTableFormat = new PlaneTableFormat();
         }
         return planeTableFormat;
-        
+
     }
 
-    
-    /** 
-     * 设置 planeTableFormat 
-     * @param planeTableFormat the planeTableFormat to set 
+    /**
+     * 设置 planeTableFormat
+     * 
+     * @param planeTableFormat the planeTableFormat to set
      */
     public void setPlaneTableFormat(PlaneTableFormat planeTableFormat) {
-        
+
         this.planeTableFormat = planeTableFormat;
-        
+
+    }
+
+    /**
+     * 返回该区域是否是liteOlap类型的标识
+     * 
+     * @return 返回该区域是否是liteOlap类型的标识
+     */
+    public boolean isLiteOlapType() {
+        return this.getType() == ExtendAreaType.LITEOLAP_TABLE || this.getType() == ExtendAreaType.LITEOLAP_CHART;
+    }
+
+    /**
+     * 返回该区域是否是图形（包括单独图形和嵌入到liteolap里面的图形）类型的标识
+     * 
+     * @return 返回该区域是否是图形（包括单独图形和嵌入到liteolap里面的图形）类型的标识
+     */
+    public boolean isChartType() {
+        return this.getType() == ExtendAreaType.CHART || this.getType() == ExtendAreaType.LITEOLAP_CHART;
+    }
+
+    /**
+     * 返回该区域是否是平面报表类型的标识
+     * 
+     * @return 返回该区域是否是平面报表类型的标识
+     */
+    public boolean isPlaneTableType() {
+        return this.getType() == ExtendAreaType.PLANE_TABLE;
     }
     
-
+    /**
+     * 返回该区域是否是多维报表类型的标识
+     * 
+     * @return 返回该区域是否是多维报表类型的标识
+     */
+    public boolean isMutiDimTableType() {
+        return this.getType() == ExtendAreaType.TABLE || this.getType() == ExtendAreaType.LITEOLAP_TABLE;
+    }
 }

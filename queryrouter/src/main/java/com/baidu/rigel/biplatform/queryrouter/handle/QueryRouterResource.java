@@ -20,6 +20,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,18 +33,19 @@ import com.baidu.rigel.biplatform.ac.util.ResponseResult;
 import com.baidu.rigel.biplatform.ac.util.ResponseResultUtils;
 import com.baidu.rigel.biplatform.queryrouter.queryplugin.QueryPlugin;
 import com.baidu.rigel.biplatform.queryrouter.queryplugin.QueryPluginFactory;
-import com.baidu.rigel.biplatform.queryrouter.queryplugin.plugins.model.QuestionModelTransformationException;
+import com.baidu.rigel.biplatform.queryrouter.queryplugin.sql.model.QuestionModelTransformationException;
 import com.google.gson.JsonSyntaxException;
 
 /**
- * 移动端对外接口
- *  
+ * queryrouter对外接口
+ * 
  * @author luowenlei
  * 
  *         2015-05-07
  */
 @RestController
 @RequestMapping("/queryrouter")
+@Service
 public class QueryRouterResource {
     
     /**
@@ -81,7 +83,8 @@ public class QueryRouterResource {
      * @return
      */
     @RequestMapping(value = "/query", method = { RequestMethod.POST })
-    public ResponseResult dispatch(HttpServletRequest request) {
+    public ResponseResult query(HttpServletRequest request) {
+        long begin = System.currentTimeMillis();
         if (request.getAttribute(PRAMA_QUESTION) == null) {
             return ResponseResultUtils.getErrorResult("question is null", 100);
         }
@@ -89,13 +92,15 @@ public class QueryRouterResource {
         // convert json to QuestionModel
         ConfigQuestionModel questionModel = AnswerCoreConstant.GSON.fromJson(questionStr,
                 ConfigQuestionModel.class);
+        questionModel.setQueryId(questionModel.getDataSourceInfo().getProductLine() + "-"
+                + questionModel.getQueryId());
         QueryRouterContext.setQueryInfo(questionModel.getQueryId());
         logger.info("queryId:{} query current handle size:{} , begin to handle this queryId.",
                 questionModel.getQueryId(), QueryRouterContext.getQueryCurrentHandleSize());
         // 限制日志输出
         if (questionStr.length() > MAX_PRINT_LENGTH) {
-            logger.info("queryId:{} request questionmodel json:{}",
-                    questionModel.getQueryId(), QueryRouterContext.getQueryCurrentHandleSize(),
+            logger.info("queryId:{} request questionmodel json:{}", questionModel.getQueryId(),
+                    QueryRouterContext.getQueryCurrentHandleSize(),
                     questionStr.substring(0, MAX_PRINT_LENGTH));
             logger.debug("queryId:{} request questionmodel json:{}", questionModel.getQueryId(),
                     questionStr);
@@ -103,29 +108,12 @@ public class QueryRouterResource {
             logger.info("queryId:{} request questionmodel json:{}", questionModel.getQueryId(),
                     questionStr);
         }
-        return this.dispatch(questionModel);
-    }
-    
-    /**
-     * 将传入的request中的questionStr通过dispatch后分发到相应的Plugin，然后转换成DataModel的json字符串
-     * 
-     * @param questionStr
-     *            request questionStr
-     * @return String dataModelJson
-     */
-    public ResponseResult dispatch(QuestionModel questionModel) {
-        long begin = System.currentTimeMillis();
+        // get DataModel
         try {
-            QueryPlugin queryPlugin = queryPluginFactory.getPlugin(questionModel);
-            logger.debug("queryId:{} dispatch cost:{} ms", questionModel.getQueryId(),
-                    System.currentTimeMillis() - begin);
-            
-            // dispatch
-            long queryPluginBegin = System.currentTimeMillis();
-            
-            DataModel dataModel = queryPlugin.query(questionModel);
-            logger.info("queryId:{} queryPlugin finished cost:{} ms", questionModel.getQueryId(),
-                    System.currentTimeMillis() - queryPluginBegin);
+            DataModel dataModel = this.query(questionModel);
+            if (dataModel == null) {
+                return ResponseResultUtils.getErrorResult("tesseract occur an error", 1);
+            }
             String dataModelJson = AnswerCoreConstant.GSON.toJson(dataModel);
             // 限制日志输出
             if (dataModelJson.length() > MAX_PRINT_LENGTH) {
@@ -141,15 +129,63 @@ public class QueryRouterResource {
                     System.currentTimeMillis() - begin);
             return ResponseResultUtils.getCorrectResult(SUCCESS, dataModelJson);
         } catch (JsonSyntaxException e) {
-            logger.error(e.getMessage());
+            logger.error("queryId:{} error msg:{}", questionModel.getQueryId(), e.getMessage());
             // 说明模型参数传入有问题
             return ResponseResultUtils.getErrorResult(
                     "json syntax exception,json is not well formed.", 100);
         } catch (QuestionModelTransformationException e) {
-            logger.error(e.getMessage());
+            logger.error("queryId:{} error msg:{}", questionModel.getQueryId(), e.getMessage());
             // 说明模型参数传入有问题
             return ResponseResultUtils.getErrorResult(
-                    "question model exception, questionmodel is incorrect.", 100);
+                    "question model exception, questionmodel is incorrect." + "reason:"
+                            + e.getMessage(), 100);
+        } finally {
+            logger.info("queryId:{} query current handle size:{} , end to handle this queryId.",
+                    questionModel.getQueryId(), QueryRouterContext.getQueryCurrentHandleSize());
+            QueryRouterContext.removeQueryInfo();
+        }
+    }
+    
+    /**
+     * 将传入的questionModel通过dispatch后分发到相应的Plugin，然后转换成DataModel对象
+     * 
+     * @param questionStr
+     *            request questionStr
+     * @return DataModel DataModel
+     */
+    private DataModel query(QuestionModel questionModel) {
+        long begin = System.currentTimeMillis();
+        QueryPlugin queryPlugin = queryPluginFactory.getPlugin(questionModel);
+        logger.info("queryId:{} getQueryPlugin cost:{}", questionModel.getQueryId(),
+                System.currentTimeMillis() - begin);
+        return queryPlugin.query(questionModel);
+    }
+    
+    /**
+     * 将传入的questionModel通过dispatch后分发到相应的Plugin，然后转换成DataModel对象,下载中心查询用
+     * 
+     * @param questionStr
+     *            request questionStr
+     * @return DataModel DataModel
+     */
+    public DataModel queryAndLog(QuestionModel questionModel) {
+        long begin = System.currentTimeMillis();
+        QueryRouterContext.setQueryInfo(questionModel.getQueryId());
+        logger.info("queryId:{} query current handle size:{} , begin to handle this queryId.",
+                questionModel.getQueryId(), QueryRouterContext.getQueryCurrentHandleSize());
+        try {
+            long beginGet = System.currentTimeMillis();
+            QueryPlugin queryPlugin = queryPluginFactory.getPlugin(questionModel);
+            logger.info("queryId:{} getQueryPlugin cost:{}", questionModel.getQueryId(),
+                    System.currentTimeMillis() - beginGet);
+            DataModel dataModel = queryPlugin.query(questionModel);
+            logger.info("queryId:{} response query toal cost:{} ms", questionModel.getQueryId(),
+                    System.currentTimeMillis() - begin);
+            return dataModel;
+        } catch (Exception e) {
+            logger.error("queryId:{} occur error, cost:{}ms, cause:{}", questionModel.getQueryId(),
+                    System.currentTimeMillis() - begin, e.getCause().getMessage());
+            return null;
         } finally {
             logger.info("queryId:{} query current handle size:{} , end to handle this queryId.",
                     questionModel.getQueryId(), QueryRouterContext.getQueryCurrentHandleSize());

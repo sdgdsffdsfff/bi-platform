@@ -42,6 +42,7 @@ import com.baidu.rigel.biplatform.ma.ds.exception.DataSourceConnectionException;
 import com.baidu.rigel.biplatform.ma.ds.exception.DataSourceOperationException;
 import com.baidu.rigel.biplatform.ma.ds.service.DataSourceConnectionService;
 import com.baidu.rigel.biplatform.ma.ds.service.DataSourceConnectionServiceFactory;
+import com.baidu.rigel.biplatform.ma.ds.service.DataSourceGroupService;
 import com.baidu.rigel.biplatform.ma.ds.service.DataSourceService;
 import com.baidu.rigel.biplatform.ma.model.consts.Constants;
 import com.baidu.rigel.biplatform.ma.model.ds.DataSourceDefine;
@@ -72,6 +73,9 @@ public class ReportModelQueryServiceImpl implements ReportModelQueryService {
     @Resource
     private DataSourceService dataSourceService;
     
+    @Resource
+    private DataSourceGroupService dataSourceGroupService;
+    
     /**
      * 
      * {@inheritDoc}
@@ -93,7 +97,7 @@ public class ReportModelQueryServiceImpl implements ReportModelQueryService {
         DataSourceDefine dsDefine = null;
         DataSourceInfo dsInfo = null;
         try {
-            dsDefine = dataSourceService.getDsDefine(cube.getSchema().getDatasource());
+            dsDefine = dataSourceService.getDsDefine(cube.getSchema().getDatasource(), params);
             DataSourceConnectionService<?> dsConnService = DataSourceConnectionServiceFactory.
             		getDataSourceConnectionServiceInstance(dsDefine.getDataSourceType().name ());
             dsInfo = dsConnService.parseToDataSourceInfo(dsDefine, securityKey);
@@ -174,7 +178,7 @@ public class ReportModelQueryServiceImpl implements ReportModelQueryService {
         DataSourceDefine dsDefine = null;
         DataSourceInfo dsInfo = null;
         try {
-            dsDefine = dataSourceService.getDsDefine(cube.getSchema().getDatasource());
+            dsDefine = dataSourceService.getDsDefine(cube.getSchema().getDatasource(), params);
             DataSourceConnectionService<?> dsConnService = DataSourceConnectionServiceFactory.
             		getDataSourceConnectionServiceInstance(dsDefine.getDataSourceType().name ());
             dsInfo = dsConnService.parseToDataSourceInfo(dsDefine, securityKey);
@@ -237,19 +241,17 @@ public class ReportModelQueryServiceImpl implements ReportModelQueryService {
     		throws DataSourceOperationException, QueryModelBuildException, MiniCubeQueryException {
         ResultSet rs = new ResultSet();
         DataSourceDefine dsDefine;
-        DataSourceInfo dsInfo;
+        DataSourceInfo dsInfo = null;
         // 获取数据源连接信息
+        String queryDsId = model.getDsId();
+        dsDefine = dataSourceService.getDsDefine(queryDsId, requestParams);
+        DataSourceConnectionService<?> dsConnService = DataSourceConnectionServiceFactory
+                .getDataSourceConnectionServiceInstance(dsDefine.getDataSourceType().name());
         try {
-            dsDefine = dataSourceService.getDsDefine(model.getDsId());
-            DataSourceConnectionService<?> dsConnService = DataSourceConnectionServiceFactory.
-                getDataSourceConnectionServiceInstance(dsDefine.getDataSourceType().name ());
             dsInfo = dsConnService.parseToDataSourceInfo(dsDefine, securityKey);
-        } catch (DataSourceOperationException e) {
-            logger.error("Fail in Finding datasource define. ", e);
-            throw e;
-        } catch (DataSourceConnectionException e) {
-            logger.error("Fail in parse datasource to datasourceInfo. ", e);
-            throw new DataSourceOperationException(e);
+        } catch (DataSourceConnectionException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
         }
         MiniCubeConnection connection = MiniCubeDriverManager.getConnection(dsInfo);
         QuestionModel questionModel;
@@ -290,7 +292,7 @@ public class ReportModelQueryServiceImpl implements ReportModelQueryService {
         DataSourceDefine dsDefine = null;
         DataSourceInfo dsInfo = null;
         try {
-            dsDefine = dataSourceService.getDsDefine(cube.getSchema().getDatasource());
+            dsDefine = dataSourceService.getDsDefine(cube.getSchema().getDatasource(), params);
             DataSourceConnectionService<?> dsConnService = DataSourceConnectionServiceFactory.
             		getDataSourceConnectionServiceInstance(dsDefine.getDataSourceType().name ());
             dsInfo = dsConnService.parseToDataSourceInfo(dsDefine, securityKey);

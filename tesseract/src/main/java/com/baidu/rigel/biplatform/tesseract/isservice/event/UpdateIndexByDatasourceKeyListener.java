@@ -18,6 +18,8 @@
  */
 package com.baidu.rigel.biplatform.tesseract.isservice.event;
 
+import java.util.List;
+
 import javax.annotation.Resource;
 
 import org.slf4j.Logger;
@@ -25,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Service;
 
-import com.baidu.rigel.biplatform.tesseract.isservice.exception.IndexAndSearchException;
 import com.baidu.rigel.biplatform.tesseract.isservice.index.service.IndexService;
 import com.baidu.rigel.biplatform.tesseract.util.isservice.LogInfoConstants;
 
@@ -68,9 +69,10 @@ public class UpdateIndexByDatasourceKeyListener implements
             throw new IllegalArgumentException();
         }
         if (event.getDataSourceKey() != null) {
-            String dataSourceKey = event.getDataSourceKey();
+            List<String> dataSourceKeyList = event.getDataSourceKey();
             try {
-                this.indexService.updateIndexByDataSourceKey(dataSourceKey,event.getDataSetNames(), event.getDataSetMap());
+                this.indexService.updateIndexByDataSourceKey(dataSourceKeyList,
+                        event.getDataSetNames(), event.getDataSetMap());
             } catch (Exception e) {
                 LOGGER.error(String.format(LogInfoConstants.INFO_PATTERN_FUNCTION_EXCEPTION,
                     "UpdateIndexByDatasourceKeyListener.onApplicationEvent", event), e);

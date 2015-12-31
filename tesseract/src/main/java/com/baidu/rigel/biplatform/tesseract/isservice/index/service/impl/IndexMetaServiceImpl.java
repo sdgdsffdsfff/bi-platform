@@ -229,6 +229,44 @@ public class IndexMetaServiceImpl extends AbstractMetaService implements IndexMe
         
     }
     
+    /**
+     * 初始化数据源描述信息
+     * @param cube 当前cube
+     * @param dataSourceInfoList 数据源组
+     * @return
+     */
+    private Map<String,DataDescInfo> initDataDescInfoList(MiniCube cube,List<DataSourceInfo> dataSourceInfoList){
+        Map<String,DataDescInfo> result = new HashMap<String,DataDescInfo>();
+        // 事实表
+        List<String> factTableList = new ArrayList<String>();
+        if (cube.isMutilple()) {
+            // currCube如果是分表的，则source是以","分隔的字符串
+            for (String factTable : cube.getSource().split(
+                TesseractConstant.MINI_CUBE_MULTI_FACTTABLE_SPLITTER)) {
+                factTableList.add(factTable);
+            }
+            
+        } else {
+            factTableList.add(cube.getSource());
+        }
+        if(!CollectionUtils.isEmpty(dataSourceInfoList)){
+            for(DataSourceInfo dataSourceInfo:dataSourceInfoList){
+                // cube涉及到的数据的描述信息
+                DataDescInfo dataDescInfo = new DataDescInfo();
+                
+                dataDescInfo.setProductLine(cube.getProductLine());
+                // 设置事实表所在数据源key
+                dataDescInfo.setSourceName(dataSourceInfo.getDataSourceKey());
+                dataDescInfo.setSplitTable(cube.isMutilple());
+                dataDescInfo.setTableName(cube.getSource());
+                dataDescInfo.setTableNameList(factTableList);
+                dataDescInfo.setIdStr(IndexFileSystemConstants.FACTTABLE_KEY);
+                result.put(dataSourceInfo.getDataSourceKey(), dataDescInfo);
+            }
+        }
+        return result;
+    }
+    
     /*
      * (non-Javadoc)
      * 
@@ -238,55 +276,23 @@ public class IndexMetaServiceImpl extends AbstractMetaService implements IndexMe
      * com.baidu.rigel.biplatform.ac.query.data.DataSourceInfo)
      */
     @Override
-    public List<IndexMeta> initMiniCubeIndexMeta(List<Cube> cubeList, DataSourceInfo dataSourceInfo) {
+    public List<IndexMeta> initMiniCubeIndexMeta(List<Cube> cubeList, List<DataSourceInfo> dataSourceInfoList) {
         /**
          * 初始化索引元数据，设置cube的维度、指标、事实表、数据源信息，设置索引元数据状态为UN_INIT;不进行索引分片的分配
          */
         List<IndexMeta> result = new ArrayList<IndexMeta>();
-        if (CollectionUtils.isEmpty(cubeList) || dataSourceInfo == null) {
+        if (CollectionUtils.isEmpty(cubeList) || dataSourceInfoList == null) {
             LOGGER.info("cubeList or dataSourceInfo in param list is null: [cubeList]:[" + cubeList
-                + "][dataSourceInfo]:[" + dataSourceInfo + "]");
+                + "][dataSourceInfoList]:[" + dataSourceInfoList + "]");
             return result;
         }
         
         // 初始化时，一个Cube对应一个IndexMeta
         for (Cube cube : cubeList) {
             MiniCube currCube = (MiniCube) cube;
-            
-            // 事实表
-            List<String> factTableList = new ArrayList<String>();
-            if (currCube.isMutilple()) {
-                // currCube如果是分表的，则source是以","分隔的字符串
-                for (String factTable : currCube.getSource().split(
-                    TesseractConstant.MINI_CUBE_MULTI_FACTTABLE_SPLITTER)) {
-                    factTableList.add(factTable);
-                }
-                
-            } else {
-                factTableList.add(currCube.getSource());
-            }
-            
-            // cube涉及到的数据的描述信息
-            DataDescInfo dataDescInfo = new DataDescInfo();
-            
-            dataDescInfo.setProductLine(currCube.getProductLine());
-            // 设置事实表所在数据源key
-            dataDescInfo.setSourceName(dataSourceInfo.getDataSourceKey());
-            dataDescInfo.setSplitTable(currCube.isMutilple());
-            dataDescInfo.setTableName(currCube.getSource());
-            dataDescInfo.setTableNameList(factTableList);
-            dataDescInfo.setIdStr(IndexFileSystemConstants.FACTTABLE_KEY);
-            
-            IndexMeta idxMeta = new IndexMeta();
-            // 设置索引元数据基本信息
-            idxMeta.setIndexMetaId(String.valueOf(UUID.randomUUID()));
-            idxMeta.setProductLine(currCube.getProductLine());
-            idxMeta.setDataDescInfo(dataDescInfo);
-            
-            idxMeta.getCubeIdSet().add(currCube.getId());
-            
             // 处理维度
             Set<String> dimSet = new HashSet<String>();
+            String shardDimBase = null;
             if (MapUtils.isNotEmpty(currCube.getDimensions())) {
                 for (String dimKey : currCube.getDimensions().keySet()) {
                     Dimension dim = currCube.getDimensions().get(dimKey);
@@ -296,13 +302,11 @@ public class IndexMetaServiceImpl extends AbstractMetaService implements IndexMe
                         dimSet.add(dimLevel.getFactTableColumn());
                         // 默认按照时间维度分片
                         if (dimLevel.getDimension().getType().equals(DimensionType.TIME_DIMENSION)) {
-                            idxMeta.setShardDimBase(dimLevel.getFactTableColumn());
+                            shardDimBase = dimLevel.getFactTableColumn() ;
                         }
                     }
                 }
             }
-            idxMeta.setDimSet(dimSet);
-            
             // 处理指标
             Set<String> measureSet = new HashSet<String>();
             if (MapUtils.isNotEmpty(currCube.getMeasures())) {
@@ -314,15 +318,33 @@ public class IndexMetaServiceImpl extends AbstractMetaService implements IndexMe
                     }
                 }
             }
-            idxMeta.setMeasureSet(measureSet);
+            Map<String,DataDescInfo> dataDescInfoMap=this.initDataDescInfoList(currCube, dataSourceInfoList);
             
-            idxMeta.setReplicaNum(this.indexConfig.getShardReplicaNum());
-            idxMeta.setDataSourceInfo(dataSourceInfo);
-            idxMeta.setDataDescInfo(dataDescInfo);
+            for(DataSourceInfo dataSourceInfo : dataSourceInfoList){
+                IndexMeta idxMeta = new IndexMeta();
+                // 设置索引元数据基本信息
+                idxMeta.setIndexMetaId(String.valueOf(UUID.randomUUID()));
+                idxMeta.setProductLine(currCube.getProductLine());
+                idxMeta.getCubeIdSet().add(currCube.getId());
+                idxMeta.setDataDescInfo(dataDescInfoMap.get(dataSourceInfo.getDataSourceKey()));                
+                
+                idxMeta.setDimSet(dimSet);
+                if(!StringUtils.isEmpty(shardDimBase)){
+                    idxMeta.setShardDimBase(shardDimBase);
+                }
+                
+                idxMeta.setMeasureSet(measureSet);
+                
+                idxMeta.setReplicaNum(this.indexConfig.getShardReplicaNum());
+                idxMeta.setDataSourceInfo(dataSourceInfo);                
+                
+                // 设置状态
+                idxMeta.setIdxState(IndexState.INDEX_UNINIT);
+                result.add(idxMeta);
+            }
             
-            // 设置状态
-            idxMeta.setIdxState(IndexState.INDEX_UNINIT);
-            result.add(idxMeta);
+            
+            
         }
         LOGGER.info("Finished init MiniCube IndexMeta");
         
@@ -524,6 +546,7 @@ public class IndexMetaServiceImpl extends AbstractMetaService implements IndexMe
      */
     @Override
     public IndexMeta getIndexMetaByCubeId(String cubeId, String storeKey) {
+        //storeKey 即在缓存中，以数据源key作为索引元数据的key
         if (StringUtils.isEmpty(cubeId) || StringUtils.isEmpty(storeKey)) {
             LOGGER.info("can not find Cube:[CubeId:" + cubeId + "] in Store:[StoreKey:" + storeKey
                 + "]");
@@ -538,7 +561,8 @@ public class IndexMetaServiceImpl extends AbstractMetaService implements IndexMe
             return null;
         }
         
-    }
+    }    
+    
     
     /*
      * (non-Javadoc)
@@ -625,28 +649,28 @@ public class IndexMetaServiceImpl extends AbstractMetaService implements IndexMe
      *            索引元数据2
      * @return IndexMetaSimilarityScore 相似度
      */
-    private IndexMetaSimilarityScore getSimilarityOfIndexMeta(IndexMeta idxMeta1, IndexMeta idxMeta2) {
+    private IndexMetaSimilarityScore getSimilarityOfIndexMeta(IndexMeta newIdxMeta, IndexMeta oldIdxMeta) {
         int dimScore = 0;
         int measureScore = 0;
-        if (idxMeta1 == null
-            || idxMeta2 == null
-            || !idxMeta1.getDataSourceInfo().getDataSourceKey()
-                .equals(idxMeta2.getDataSourceInfo().getDataSourceKey())) {
+        if (newIdxMeta == null
+            || oldIdxMeta == null
+            || !newIdxMeta.getDataSourceInfo().getDataSourceKey()
+                .equals(oldIdxMeta.getDataSourceInfo().getDataSourceKey())) {
             
             return new IndexMetaSimilarityScore();
         }
         
         // 维度信息
-        Set<String> dimInfoSet1 = idxMeta1.getDimSet();
-        Set<String> dimInfoSet2 = idxMeta2.getDimSet();
+        Set<String> dimInfoSet1 = newIdxMeta.getDimSet();
+        Set<String> dimInfoSet2 = oldIdxMeta.getDimSet();
         if (dimInfoSet2.containsAll(dimInfoSet1)) {
-            dimScore += dimInfoSet2.size();
+            dimScore += dimInfoSet1.size();
         }
         // 指标信息
-        Set<String> measureSet1 = idxMeta1.getMeasureSet();
-        Set<String> measureSet2 = idxMeta2.getMeasureSet();
+        Set<String> measureSet1 = newIdxMeta.getMeasureSet();
+        Set<String> measureSet2 = oldIdxMeta.getMeasureSet();
         if (measureSet2.containsAll(measureSet1)) {
-            measureScore += measureSet2.size();
+            measureScore += measureSet1.size();
         } else {
             Collection<String> measureIntersection = getIntersectionOf2Collection(measureSet1,
                 measureSet2);
@@ -1098,7 +1122,9 @@ public class IndexMetaServiceImpl extends AbstractMetaService implements IndexMe
                     IndexMeta currMeta = AnswerCoreConstant.GSON.fromJson(jr,
                         new TypeToken<IndexMeta>() {
                         }.getType());
-                    
+                    if (CollectionUtils.isEmpty(currMeta.getCubeIdSet())) {
+                        continue;
+                    }
                     // 设置currNodeKey
                     for (IndexShard idxShard : currMeta.getIdxShardList()) {
                         idxShard.setNodeKey(currNodeKey);

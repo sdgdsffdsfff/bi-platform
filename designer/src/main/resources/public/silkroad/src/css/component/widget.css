@@ -177,3 +177,131 @@
     color: #999999;
     min-height: 35px;
 }
+
+.biplt-radius {
+    height: 16px;
+    width: 16px;
+    border-radius: 50%;
+    background-color: #00a1cb;
+    overflow: hidden;
+    position: relative;
+    display: inline-block;
+}
+.biplt-normal {
+    height: 16px;
+    width: 16px;
+    position: relative;
+    overflow: hidden;
+    display: inline-block;
+}
+.biplt-radius-red {
+    background-color: #e99586;
+}
+.biplt-del {}
+
+.biplt-del > span {
+    position: absolute;
+    width: 12px;
+    height: 4px;
+    top: 6px;
+    left: 2px;
+    background: #fff;
+    -webkit-transform: rotate(-45deg);
+       -moz-transform: rotate(-45deg);
+        -ms-transform: rotate(-45deg);
+         -o-transform: rotate(-45deg);
+            transform: rotate(-45deg);
+}
+.biplt-del > span:after {
+    content: "";
+    width: 12px;
+    height: 4px;
+    background: #fff;
+    position: absolute;
+    top: 0;
+    left: 0;
+    -webkit-transform: rotate(90deg);
+       -moz-transform: rotate(90deg);
+        -ms-transform: rotate(90deg);
+         -o-transform: rotate(90deg);
+            transform: rotate(90deg);
+}
+
+.biplt-add {}
+
+.biplt-add > span {
+    position: absolute;
+    width: 12px;
+    height: 4px;
+    background: #fff;
+    left: 2px;
+    top: 6px;
+}
+.biplt-add > span:after {
+    content: "";
+    width: 4px;
+    height: 12px;
+    background: #fff;
+    position: absolute;
+    left: 4px;
+    top: -4px;
+}
+
+.biplt-look {}
+
+.biplt-look > span {
+    height: 7px;
+    width: 7px;
+    background: transparent;
+    -webkit-border-radius: 50px;
+       -moz-border-radius: 50px;
+            border-radius: 50px;
+    border: 2px solid #00a1cb;
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+.biplt-look > span:after {
+    content: "";
+    width: 4px;
+    height: 8px;
+    background: #00a1cb;
+    position: absolute;
+    top: 6px;
+    left: 7px;
+    -webkit-transform: rotate(-45deg);
+       -moz-transform: rotate(-45deg);
+        -ms-transform: rotate(-45deg);
+         -o-transform: rotate(-45deg);
+            transform: rotate(-45deg);
+}
+
+.biplt-start {}
+
+.biplt-start > span {
+    width: 0;
+    height: 0;
+    position: absolute;
+    left: 6px;
+    top: 4px;
+    border-style: solid;
+    border-color: transparent transparent transparent #fff;
+    border-width: 4px 4px 4px 7px;
+}
+
+.biplt-stop {}
+
+.biplt-stop > span {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    top: 5px;
+    left: 5px;
+    background: #fff;
+}
+
+.dialog-ok-cancel-box {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+}

@@ -42,7 +42,7 @@ public class DivideCalculateNode extends CalculateNode {
         if(this.getRight().getNodeType().equals(NodeType.Numeric)) {
             SingleComputeResult singleResult = (SingleComputeResult) this.getRight().getResult(null);
             if (BigDecimal.ZERO.equals(singleResult.getData())) {
-                throw new NodeCompileException(this, "divide calcaulate denominator can not be zero.");
+//                throw new NodeCompileException(this, "divide calcaulate denominator can not be zero.");
             }
         }
     }

@@ -36,6 +36,8 @@ import com.baidu.rigel.biplatform.ac.query.data.DataSourceInfo;
 import com.baidu.rigel.biplatform.ac.query.model.ConfigQuestionModel;
 import com.baidu.rigel.biplatform.ac.query.model.PageInfo;
 import com.baidu.rigel.biplatform.ac.query.model.QuestionModel;
+import com.baidu.rigel.biplatform.ac.util.AnswerCoreConstant;
+import com.baidu.rigel.biplatform.ac.util.DeepcopyUtils;
 import com.baidu.rigel.biplatform.ac.util.MetaNameUtil;
 import com.baidu.rigel.biplatform.tesseract.dataquery.udf.condition.CallbackCondition;
 import com.baidu.rigel.biplatform.tesseract.datasource.DataSourcePoolService;
@@ -175,7 +177,7 @@ public class QueryServiceImpl implements QueryService {
                                 SearchIndexResultSet resultSet = callbackSearchService
                                         .query(context, QueryRequestBuilder.buildQueryRequest(dsInfo, finalCube, 
                                         context, questionModel.isUseIndex(), null));
-                                dm = new DataModelBuilder(resultSet, context).build(true);
+                                dm = new DataModelBuilder(resultSet, context).build(true, finalCube);
                             } catch (Exception e) {
                                 logger.error("catch error when process callback measure {}",e.getMessage());
                                 throw new RuntimeException(e);
@@ -206,7 +208,7 @@ public class QueryServiceImpl implements QueryService {
         if (statDimensionNode(queryContext.getRowMemberTrees(), false, false) == 0
                 || (statDimensionNode(queryContext.getColumnMemberTrees(), false, false) == 0 && CollectionUtils
                         .isEmpty(queryContext.getQueryMeasures()))) {
-            return new DataModelBuilder(null, queryContext).build(false);
+            return new DataModelBuilder(null, queryContext).build(false, cube);
         }
         logger.info("executeQuery cost :" + (System.currentTimeMillis() - current) + " to build query request.");
         current = System.currentTimeMillis();
@@ -232,7 +234,7 @@ public class QueryServiceImpl implements QueryService {
             
             long beforeBuildCurr=System.currentTimeMillis();
             
-            result = new DataModelBuilder(resultSet, queryContext).build(false);
+            result = new DataModelBuilder(resultSet, queryContext).build(false, cube);
             
             logger.info("executeQuery cost :" + (System.currentTimeMillis() - beforeBuildCurr) + " to build DataModel.");
         } catch (IndexAndSearchException e) {
@@ -242,8 +244,63 @@ public class QueryServiceImpl implements QueryService {
         logger.info("executeQuery cost :" + (System.currentTimeMillis() - currentBegin) + " to execute query totally.");
         return result;
     }
-
     
+    
+    /**
+     * executeQuery
+     *
+     * @param questionModel
+     * @return
+     * @throws MiniCubeQueryException
+     */
+    @Override
+    public DataModel queryIndex(QuestionModel questionModel, QueryContext queryContext) throws MiniCubeQueryException {
+        ConfigQuestionModel configQuestionModel = (ConfigQuestionModel)questionModel;
+        Cube cube = configQuestionModel.getCube();
+        DataSourceInfo dataSourceInfo = configQuestionModel.getDataSourceInfo();
+        
+        long current = System.currentTimeMillis();
+        long currentBegin = System.currentTimeMillis();
+        QueryRequest queryRequest =
+                QueryRequestBuilder.buildQueryRequest(dataSourceInfo, cube, queryContext, configQuestionModel.isUseIndex(), questionModel.getPageInfo());
+        if (statDimensionNode(queryContext.getRowMemberTrees(), false, false) == 0
+                || (statDimensionNode(queryContext.getColumnMemberTrees(), false, false) == 0 && CollectionUtils
+                        .isEmpty(queryContext.getQueryMeasures()))) {
+            return new DataModelBuilder(null, queryContext).build(true, cube);
+        }
+        logger.info("executeQuery cost :" + (System.currentTimeMillis() - current) + " to build query request.");
+        current = System.currentTimeMillis();
+        DataModel result = null;
+        try {
+            SearchIndexResultSet resultSet = searchService.query(queryRequest);
+            logger.info("executeQuery cost :" + (System.currentTimeMillis() - current) + " to get query result.");
+            current = System.currentTimeMillis();
+            if (queryRequest.getGroupBy() != null && CollectionUtils.isNotEmpty(queryRequest.getGroupBy().getGroups())) {
+                try {
+                    resultSet = QueryRequestUtil.processGroupBy(resultSet, queryRequest, queryContext);
+                } catch (NoSuchFieldException e) {
+                    e.printStackTrace();
+                    logger.error(String.format(LogInfoConstants.INFO_PATTERN_FUNCTION_EXCEPTION, "query", "[query:" + queryRequest
+                            + "]", e));
+                    throw new IndexAndSearchException(TesseractExceptionUtils.getExceptionMessage(
+                            IndexAndSearchException.QUERYEXCEPTION_MESSAGE, IndexAndSearchExceptionType.SEARCH_EXCEPTION),
+                            e, IndexAndSearchExceptionType.SEARCH_EXCEPTION);
+                }
+            }
+            logger.info("executeQuery cost :" + (System.currentTimeMillis() - current) + " to processGroupBy.");
+            
+            long beforeBuildCurr=System.currentTimeMillis();
+            
+            result = new DataModelBuilder(resultSet, queryContext).build(false, cube);
+            
+            logger.info("executeQuery cost :" + (System.currentTimeMillis() - beforeBuildCurr) + " to build DataModel.");
+        } catch (IndexAndSearchException e) {
+            logger.error("query occur when search queryRequest：" + queryContext, e);
+            throw new MiniCubeQueryException(e);
+        }
+        logger.info("executeQuery cost :" + (System.currentTimeMillis() - currentBegin) + " to execute query totally.");
+        return result;
+    }
 
     /**
      * 
@@ -320,6 +377,16 @@ public class QueryServiceImpl implements QueryService {
     }
 
     
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * com.baidu.rigel.biplatform.tesseract.qsservice.query.QueryService#hasIndex
+     * (com.baidu.rigel.biplatform.tesseract.qsservice.query.vo.QueryRequest)
+     */
+    public boolean hasIndex(QueryRequest query) {
+        return this.searchService.hasIndexMeta(query);
+    }
 
     
 

@@ -3,7 +3,7 @@ define(['template'], function (template) {
         /**/) {
         'use strict';
         $data=$data||{};
-        var $utils=template.utils,$helpers=$utils.$helpers,$escape=$utils.$escape,taskInfo=$data.taskInfo,$each=$utils.$each,paramList=$data.paramList,item=$data.item,$index=$data.$index,granularityId=$data.granularityId,$granularityKey=$data.$granularityKey,child=$data.child,$childKey=$data.$childKey,$out='';$out+='<div class="fix-report-basic-set j-fix-report-basic-set">\n    <h4>基本设置</h4>\n    <div class="fix-report-task-name-set c-f">\n        <span class="f-l">任务名称：</span>\n        <input class="f-l j-task-id" type="text" id="';
+        var $utils=template.utils,$helpers=$utils.$helpers,$escape=$utils.$escape,taskInfo=$data.taskInfo,$each=$utils.$each,paramList=$data.paramList,item=$data.item,$index=$data.$index,granularityId=$data.granularityId,$granularityKey=$data.$granularityKey,child=$data.child,$childKey=$data.$childKey,$out='';$out+='<div class="fix-report-basic-set j-fix-report-basic-set">\n    <h4>基本设置</h4>\n    <div class="fix-report-task-name-set c-f">\n        <span class="f-l">任务名称：</span>\n        <input class="f-l j-task-id" type="text" task-id="';
         $out+=$escape(taskInfo.taskId);
         $out+='" value="';
         $out+=$escape(taskInfo.taskName);
@@ -31,19 +31,19 @@ define(['template'], function (template) {
         if(taskInfo.isRunNow){
         $out+=' hide ';
         }
-        $out+='">\n        <span class="f-l">执行时间:</span>\n        <div class="f-l c-f">\n            <span class="f-l">时</span>\n            <input type="text" class="f-l j-time-hour" ';
+        $out+='">\n        <span class="f-l">执行时间:</span>\n        <div class="f-l c-f">\n            <input type="text" class="f-l j-time-hour" ';
         if(!taskInfo.isRunNow){
         $out+=' value="';
         $out+=$escape(taskInfo.executeStrategy.hour);
         $out+='" ';
         }
-        $out+=' placeholder="请输入数字"/>\n            <span class="f-l">分</span>\n            <input type="text" class="f-l j-time-minute" ';
+        $out+=' placeholder="请输入数字"/>\n            <span class="f-l">时</span>\n            <input type="text" class="f-l j-time-minute" ';
         if(!taskInfo.isRunNow){
         $out+=' value="';
         $out+=$escape(taskInfo.executeStrategy.minute);
         $out+='" ';
         }
-        $out+=' placeholder="请输入数字"/>\n        </div>\n    </div>\n    <div class="item-set-execute-granular c-f j-isRunNow-set';
+        $out+=' placeholder="请输入数字"/>\n            <span class="f-l">分</span>\n        </div>\n    </div>\n    <div class="item-set-execute-granular c-f j-isRunNow-set';
         if(taskInfo.isRunNow){
         $out+=' hide ';
         }

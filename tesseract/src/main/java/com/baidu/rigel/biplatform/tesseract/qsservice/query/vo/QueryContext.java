@@ -63,6 +63,27 @@ public class QueryContext implements Serializable {
      * filterExpression 过滤表达式，需重新考虑，保留信息，暂时不使用
      */
     private Map<String, List<String>> filterExpression;
+    /**
+     * 记录需要上移汇总的维度名称
+     */
+    private List<String> dimsNeedSumBySubLevel;
+
+    /**
+     * @return the dimsNeedSumBySubLevel
+     */
+    public List<String> getDimsNeedSumBySubLevel() {
+        if (this.dimsNeedSumBySubLevel == null) {
+            this.dimsNeedSumBySubLevel = new ArrayList<String>();
+        }
+        return dimsNeedSumBySubLevel;
+    }
+
+    /**
+     * @param dimsNeedSumBySubLevel the dimsNeedSumBySubLevel to set
+     */
+    public void setDimsNeedSumBySubLevel(List<String> dimsNeedSumBySubLevel) {
+        this.dimsNeedSumBySubLevel = dimsNeedSumBySubLevel;
+    }
 
     /**
      * get columnMemberTrees

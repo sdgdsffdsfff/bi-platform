@@ -19,6 +19,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+
 import org.springframework.util.StringUtils;
 
 import com.baidu.rigel.biplatform.ac.model.Dimension;
@@ -181,6 +184,30 @@ public final class ResourceUtils {
             }
         }
         return rs;
+    }
+    
+    /**
+     * 从request请求对象中去取制定的cookie信息
+     * 
+     * @param request request
+     * @param cookieName cookieName
+     * @return 返回取到的cookie信息
+     */
+    public static String getCookieValueFromRequest(HttpServletRequest request, String cookieName) {
+        if (!StringUtils.hasLength(cookieName)) {
+            throw new IllegalArgumentException("the cookieName can not be empty !");
+        }
+        Cookie[] cookies = request.getCookies();
+        String result = null;
+        if (cookies != null && cookies.length > 0) {
+            for (Cookie cookie : cookies) {
+                if (cookie != null && cookieName.equals(cookie.getName())) {
+                    result = cookie.getValue();
+                    break;
+                }
+            }
+        }
+        return result;
     }
 
 }

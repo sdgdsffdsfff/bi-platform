@@ -76,6 +76,11 @@ public class QueryAction implements Serializable {
      * 是否是图查询
      */
     private boolean chartQuery;
+    /**
+     * 是否是时间趋势图
+     * TODO trendQuery应该与chartQuery合并成枚举类-->queryType
+     */
+    private boolean trendQuery;
     
     private OrderDesc orderDesc;
     
@@ -229,6 +234,24 @@ public class QueryAction implements Serializable {
         this.chartQuery = chartQuery;
     }
     
+    
+    
+    
+
+    /**
+     * @return the trendQuery
+     */
+    public boolean isTrendQuery() {
+        return trendQuery;
+    }
+
+    /**
+     * @param trendQuery the trendQuery to set
+     */
+    public void setTrendQuery(boolean trendQuery) {
+        this.trendQuery = trendQuery;
+    }
+
     /**
      * @return the orderDesc
      */

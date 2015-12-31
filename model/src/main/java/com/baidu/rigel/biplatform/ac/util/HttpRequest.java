@@ -476,8 +476,14 @@ public class HttpRequest {
         private static List<HttpRoute> getRoutee() {
             String addresses = ConfigInfoUtils.getServerAddress ();
             List<HttpRoute> routee = Lists.newArrayList ();
-            String addressConf = addresses.substring (addresses.indexOf ("[") + 1, addresses.lastIndexOf("]"));
-            String[] addressArray = addressConf.split (" ");
+            String[] addressArray = null;
+            if (addresses.indexOf ("[") < 0 || addresses.indexOf ("]") < 0) {
+                addressArray = new String[1];
+                addressArray[0] = StringUtils.replace(addresses.split("http:")[1], "/", "");
+            } else {
+                String addressConf = addresses.substring (addresses.indexOf ("[") + 1, addresses.lastIndexOf("]"));
+                addressArray = addressConf.split (" ");
+            }
             try {
                 for (String addr : addressArray) {
                     int port = Integer.valueOf (addr.split (":")[1]);

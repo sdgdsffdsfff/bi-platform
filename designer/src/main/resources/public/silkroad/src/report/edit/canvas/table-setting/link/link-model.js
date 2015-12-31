@@ -12,8 +12,10 @@ define(['url'], function (Url) {
     //------------------------------------------
 
     var Model = Backbone.Model.extend({
-        defaults: {},
-        initialize: function () { },
+        defaults: {
+            operationColumnId: ''
+        },
+        initialize: function () {},
 
         /**
          * 获取列跳转平面表设置数据
@@ -28,30 +30,16 @@ define(['url'], function (Url) {
                 type: 'get',
                 success: function (data) {
                     success(data.data);
+                    if (data.data && data.data.planeTableList) {
+                        that.set('planeTableList', data.data.planeTableList);
+                    }
+                    if (data.data && data.data.operationColumn) {
+                        var operationColumn = data.data.operationColumn;
+                        var operationColumnId = operationColumn[operationColumn.length - 1].value;
+                        that.set('operationColumnId', operationColumnId);
+                    }
                 }
             });
-            //var data = {
-            //    "columnDefine": [
-            //        {"text": "文本1", "value": "text1", "selectedTable": "table1"},
-            //        {"text": "文本2", "value": "text2", "selectedTable": "table2"},
-            //        {"text": "文本3", "value": "text3", "selectedTable": "table3"}
-            //    ],
-            //    "planeTableList": [
-            //        {
-            //            "text": "表1",
-            //            "value": "table1"
-            //        },
-            //        {
-            //            "text": "表2",
-            //            "value": "table2"
-            //        },
-            //        {
-            //            "text": "表3",
-            //            "value": "table3"
-            //        }
-            //    ]
-            //};
-            //success(data);
         },
 
         /**
@@ -129,7 +117,27 @@ define(['url'], function (Url) {
                     success();
                 }
             });
+        },
+
+        /**
+         * 删除操作列
+         * @param {string} linkId 链接id
+         * @param {Function} success 回调函数
+         *
+         * @public
+         *
+         */
+        delOperationColumn: function (linkId, success) {
+            var that = this;
+            $.ajax({
+                url: Url.delColumnLink(that.get('reportId'), that.get('compId'), linkId),
+                type: 'DELETE',
+                success: function () {
+                    success();
+                }
+            });
         }
+
     });
 
     return Model;

@@ -69,9 +69,9 @@ public class MiniCubeSqlConnection implements MiniCubeConnection {
         String response = null;
         String questionModelJson = null;
         questionModel.setQueryId(Long.valueOf(System.nanoTime()).toString());
-        if (ConfigInfoUtils.getQueryRouterAddress() != null) {
-            String systemCode = ConfigInfoUtils.getQueryRouterSystemCode();
-            String systemkey = ConfigInfoUtils.getQueryRouterSystemKey();
+        if (ConfigInfoUtils.getServerAddress() != null) {
+            String systemCode = ConfigInfoUtils.getServerSystemCode();
+            String systemkey = ConfigInfoUtils.getServerSystemKey();
             if (systemCode == null || systemkey == null) {
                 log.error("properties conf at : \"server.queryrouter.systemcode\" "
                         + "or \"server.queryrouter.systemkey\"   is null");
@@ -91,15 +91,10 @@ public class MiniCubeSqlConnection implements MiniCubeConnection {
                 throw new MiniCubeQueryException(e.getMessage());
             }
             params.put("signature", Md5Util.encode(questionModelJson, systemkey));
-            response = HttpRequest.sendPost(ConfigInfoUtils.getQueryRouterAddress() + "/queryrouter/query", params);
-        } else {
-            questionModelJson = AnswerCoreConstant.GSON.toJson(questionModel);
-            log.info("queryId:{} begin execute query with tesseract ", questionModel.getQueryId());
-            params.put(QUESTIONMODEL_PARAM_KEY, questionModelJson);
-            response = HttpRequest.sendPost(ConfigInfoUtils.getServerAddress() + "/query", params);
+            response = HttpRequest.sendPost(ConfigInfoUtils.getServerAddress() + "/queryrouter/query", params);
         }
-
-        log.info("execute query with tesseract/queryrouter cost {} ms",
+        
+        log.info("execute query with queryrouter cost {} ms",
                 (System.currentTimeMillis() - curr));
         ResponseResult responseResult = AnswerCoreConstant.GSON.fromJson(
                 response, ResponseResult.class);

@@ -12,6 +12,7 @@ import javax.annotation.Resource;
 
 import org.apache.commons.collections.MapUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import com.baidu.rigel.biplatform.ac.model.Cube;
 import com.baidu.rigel.biplatform.ac.model.Dimension;
@@ -157,6 +158,13 @@ public class OlapLinkServiceImpl implements OlapLinkService {
                         .forEach(condDim -> { 
                             addDimToMap(condDim, queryContext, olapTableDesignModel, extendArea, conditionMap);
                         });
+            } else if (ExtendAreaType.LITEOLAP_TABLE.equals(extendArea.getType())) {
+                ExtendArea liteOlapExtendArea = olapTableDesignModel.getExtendById(extendArea.getReferenceAreaId());
+                Stream.of(liteOlapExtendArea.getLogicModel().getSlices())
+                        .filter(items -> items != null)
+                        .forEach(condDim -> { 
+                            addDimToMap(condDim, queryContext, olapTableDesignModel, extendArea, conditionMap);
+                });
             }
         }
         return conditionMap;
@@ -187,11 +195,14 @@ public class OlapLinkServiceImpl implements OlapLinkService {
         Dimension dim = cube.getDimensions().get(olapElementId);
         String condDimName = dim.getName();
         String condUniqueName = "";
-        // 如果发现是时间条件，则uniqueName直接等于condDimValue
-        if (extendArea.getType() == ExtendAreaType.TIME_COMP) {
+        // 如果发现是时间条件或者本来传过来的就是uniqueName，则uniqueName直接等于condDimValue
+        if (extendArea.getType() == ExtendAreaType.TIME_COMP || MetaNameUtil.isUniqueName(condDimValue)) {
             condUniqueName = condDimValue;
         } else {
             condUniqueName = MetaNameUtil.getNameFromMetaName(condDimValue);
+            if (!StringUtils.isEmpty(condUniqueName) && !MetaNameUtil.isUniqueName(condUniqueName)) {
+                condUniqueName = MetaNameUtil.makeUniqueName(dim, condDimValue);
+            }
         }
         Map<String, String> uniqueMap = buildConditionUniqueMap(condDimValue, condUniqueName);
         conditionMap.put(condDimName, uniqueMap);
@@ -334,6 +345,9 @@ public class OlapLinkServiceImpl implements OlapLinkService {
         for (Item dimItem : items) {
             String dimId = dimItem.getOlapElementId();
             Dimension dim = cube.getDimensions().get(dimId);
+            if (dim == null) {
+                continue;
+            }
             addDimToList(dimList, dim, countedSet);
         }
         return dimList;

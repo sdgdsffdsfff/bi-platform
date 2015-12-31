@@ -15,17 +15,10 @@
  */
 package com.baidu.rigel.biplatform.queryrouter.queryplugin;
 
-import javax.annotation.Resource;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.springframework.stereotype.Service;
-
-import com.baidu.rigel.biplatform.ac.query.MiniCubeConnection.DataSourceType;
-import com.baidu.rigel.biplatform.ac.query.data.impl.SqlDataSourceInfo;
-import com.baidu.rigel.biplatform.ac.query.data.impl.SqlDataSourceInfo.DataBase;
-import com.baidu.rigel.biplatform.ac.query.model.ConfigQuestionModel;
 import com.baidu.rigel.biplatform.ac.query.model.QuestionModel;
-import com.baidu.rigel.biplatform.queryrouter.queryplugin.plugins.QuerySqlPlugin;
-import com.baidu.rigel.biplatform.queryrouter.queryplugin.plugins.QueryTessractPlugin;
 
 /**
  * 查询插件获取类
@@ -33,55 +26,37 @@ import com.baidu.rigel.biplatform.queryrouter.queryplugin.plugins.QueryTessractP
  * @author luowenlei
  *
  */
-@Service
 public class QueryPluginFactory {
-
-    /**
-     * TessractPlugin
-     */
-    @Resource(name = "queryTessractPlugin")
-    private QueryTessractPlugin queryTessractPlugin;
-
-    /**
-     * queryMysqlPlugin
-     */
-    @Resource(name = "querySqlPlugin")
-    private QuerySqlPlugin querySqlPlugin;
-
+    
+    private List<QueryPlugin> activePluginList;
+    
     /**
      * 获取查询插件
      *
-     * @param strategy
-     *            认证策略
-     * @return QueryPlugin 认证服务实例
+     * @param QuestionModel
+     * @return QueryPlugin 查询插件
      */
     public QueryPlugin getPlugin(QuestionModel questionModel) {
-        if (questionModel instanceof ConfigQuestionModel) {
-            ConfigQuestionModel configQuestionModel = (ConfigQuestionModel) questionModel;
-            if (configQuestionModel.getDataSourceInfo().getDataSourceType() == DataSourceType.SQL) {
-                SqlDataSourceInfo sqlDataSourceInfo = (SqlDataSourceInfo) configQuestionModel
-                        .getDataSourceInfo();
-                if (sqlDataSourceInfo.getDataBase() == DataBase.MYSQL) {
-                    // 临时方案 通过querysource判断
-                    if ("TESSERACT"
-                            .equals(configQuestionModel.getQuerySource())) {
-                        return queryTessractPlugin;
-                    } else if ("SQL".equals(configQuestionModel
-                            .getQuerySource())) {
-                        return querySqlPlugin;
-                    }
-                } else if (sqlDataSourceInfo.getDataBase() == DataBase.PALO) {
-                    // 临时方案 通过querysource判断
-                    if ("TESSERACT"
-                            .equals(configQuestionModel.getQuerySource())) {
-                        return queryTessractPlugin;
-                    } else if ("SQL".equals(configQuestionModel
-                            .getQuerySource())) {
-                        return querySqlPlugin;
-                    }
-                }
+        List<QueryPlugin> suitablePlugins = new ArrayList<QueryPlugin>();
+        activePluginList.forEach((queryPlugin) -> {
+            if (queryPlugin.isSuitable(questionModel)) {
+                suitablePlugins.add(queryPlugin);
             }
+        });
+        if (suitablePlugins.isEmpty()) {
+            return null;
+        } else {
+            return suitablePlugins.get(0);
         }
-        return null;
+    }
+    
+    /**
+     * default generate set activePluginList
+     * 
+     * @param activePluginList
+     *            the activePluginList to set
+     */
+    public void setActivePluginList(List<QueryPlugin> activePluginList) {
+        this.activePluginList = activePluginList;
     }
 }

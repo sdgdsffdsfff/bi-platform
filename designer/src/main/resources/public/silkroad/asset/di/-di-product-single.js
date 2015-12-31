@@ -28141,7 +28141,7 @@ _nDay       - 从本月1号开始计算的天数，如果是上个月，是负�
         if (wrap.indent) {
             // margin-left会用来判断indent的点击事件，所以结构不能变
             attrStr.push('data-indent="' + wrap.indent + '"');
-            indentStyle = 'margin-left:' + (parseInt(TREE_INDENT * wrap.indent) - 15) + 'px;';
+            indentStyle = 'margin-left:' + parseInt(TREE_INDENT * wrap.indent, 10) + 'px;';
         }
 
         if (wrap.drillByLink) {
@@ -28150,14 +28150,25 @@ _nDay       - 从本月1号开始计算的天数，如果是上个月，是负�
         }
         // 增加判断逻辑，如果改行是手动汇总行，那么linkBridge也不能有点击，否则后台没法处理
 //        else if (defItem && defItem.linkBridge && wrap.cellId && wrap.cellId.indexOf('[SUMMARY_NODE].[ALL]') < 0) {
-        else if (value !== '-' && defItem && defItem.linkBridge) {
+        else if ((value + '').indexOf('-') === -1 && defItem && defItem.linkBridge && !defItem.format) {
             attrStr.push('data-cell-link="true"');
+            value = value.split(',');
             // value = '<a href="#" class="' + type + '-cell-link" data-cell-link-bridge-a="1">' + value + '</a>';
-            value = [
-                '<a href="#" class="', type, '-cell-link" data-cell-link-bridge-a="1">',
-                    value,
-                '</a>'
-            ].join('');
+            var str = [];
+            for (var i = 0; i < value.length; i ++) {
+                str.push(
+                    [
+                        '<a href="#" class="', type, '-cell-link" data-cell-link-bridge-a="', i, '">',
+                        value[i],
+                        '</a>'
+                    ].join('')
+                );
+            }
+            value = str.join('&nbsp;&nbsp;');
+        }
+        else if ((value + '').indexOf('-') === -1 && defItem && defItem.linkBridge && defItem.format) {
+            attrStr.push('data-cell-link="true"');
+            value = '<a href="#" class="' + type + '-cell-link" data-cell-link-bridge-a="0">' + value + '</a>';
         }
 
         // 条件格式
@@ -28276,12 +28287,13 @@ _nDay       - 从本月1号开始计算的天数，如果是上个月，是负�
                     else if (aEl.getAttribute('data-cell-link-bridge-a')) {
                         aEl.onclick = (function(colDefItem, rowDefItem) {
                             return function() {
+                                var index = this.getAttribute('data-cell-link-bridge-a');
                                 !me._bDisabled
                                 && triggerEvent(
                                     me,
                                     'celllinkbridge',
                                     null,
-                                    [colDefItem, rowDefItem]
+                                    [colDefItem, rowDefItem, index]
                                 );
                                 return false;
                             }
@@ -78858,7 +78870,7 @@ $namespace('di.shared.ui');
      * @param {string} url 目标url
      * @param {Object} options 参数
      */
-    DI_TABLE_CLASS.$handleLinkBridge = function (colDefItem, rowDefItem) {
+    DI_TABLE_CLASS.$handleLinkBridge = function (colDefItem, rowDefItem, index) {
         var address = URL.getWebRoot()
             + '/reports/'
             + this.reportId
@@ -78878,7 +78890,7 @@ $namespace('di.shared.ui');
         oForm.appendChild(uniqueNameParam);
 
         var meaureParam = document.createElement("input");
-        meaureParam.value = colDefItem.linkBridge;
+        meaureParam.value = colDefItem.linkBridge.split(',')[index];
         meaureParam.name = "measureId";
         oForm.appendChild(meaureParam);
         oForm.submit();

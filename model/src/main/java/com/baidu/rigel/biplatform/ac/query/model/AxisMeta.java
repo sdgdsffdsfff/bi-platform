@@ -22,6 +22,8 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.collect.Lists;
+
 /**
  * query meta in row axis
  * 
@@ -44,6 +46,11 @@ public class AxisMeta implements Serializable {
      * queryMeasures 查询的指标信息，暂时不支持行上放指标 TODO 查询的指标 如果支持自定义指标的话，这里最好不用String类型。1期先这样。后续修改
      */
     private List<String> queryMeasures;
+    
+    /**
+     * 平面表所需的查询字段之间的顺序，该变量仅会在平面表查询过程中使用
+     */
+    private List<String> queryItemsOrder;
 
     /**
      * axisType 轴的类型
@@ -151,7 +158,30 @@ public class AxisMeta implements Serializable {
     @Override
     public String toString() {
         return "AxisMeta [crossjoinDims=" + crossjoinDims + ", queryMeasures=" + queryMeasures + ", axisType="
-                + axisType + "]";
+                + axisType + ", queryItemOrders=" + queryItemsOrder + "]";
+    }
+
+    
+    /** 
+     * 获取 queryItemsOrder 
+     * @return the queryItemsOrder 
+     */
+    public List<String> getQueryItemsOrder() {
+        if (queryItemsOrder == null) {
+            queryItemsOrder = Lists.newArrayList();
+        }
+        return queryItemsOrder;
+        
+    }
+
+    
+    /** 
+     * 设置 queryItemsOrder 
+     * @param queryItemsOrder the queryItemsOrder to set 
+     */
+    public void setQueryItemsOrder(List<String> queryItemsOrder) {
+        this.queryItemsOrder = queryItemsOrder;
+        
     }
 
 }

@@ -162,6 +162,20 @@ public class ReportModelCacheManager {
      */
     public ReportRuntimeModel getRuntimeModel(String reportId) throws CacheOperationException {
         long begin = System.currentTimeMillis ();
+        ReportRuntimeModel runTimeModel = getRuntimeModelUnsafety(reportId);
+        if (runTimeModel == null) {
+            throw new CacheOperationException("No such Model in cache!");
+        }
+        LOG.info ("get runtimemodel from cache cost : {} ms", (System.currentTimeMillis () - begin));
+        return runTimeModel;
+    }
+
+    /**
+     * 从缓存中获取运行时模型(不安全)
+     * @param reportId
+     * @return
+     */
+    public ReportRuntimeModel getRuntimeModelUnsafety(String reportId) {
         String sessionId = ContextManager.getSessionId();
         String productLine = ContextManager.getProductLine();
         String runtimeReportKey = CacheKeyGenerator.generateRuntimeReportKey(sessionId, reportId,
@@ -169,12 +183,11 @@ public class ReportModelCacheManager {
         byte[] modelBytes = (byte[]) cacheManagerForReource.getFromCache(runtimeReportKey);
         ReportRuntimeModel runTimeModel = (ReportRuntimeModel) SerializationUtils
             .deserialize(modelBytes);
-        if (runTimeModel == null) {
-            throw new CacheOperationException("No such Model in cache!");
-        }
-        LOG.info ("get runtimemodel from cache cost : {} ms", (System.currentTimeMillis () - begin));
         return runTimeModel;
     }
+    
+    
+    
     
     /**
      * 加载运行模型到分布式缓存

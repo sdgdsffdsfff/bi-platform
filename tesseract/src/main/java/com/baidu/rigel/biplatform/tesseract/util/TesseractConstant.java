@@ -89,5 +89,4 @@ public class TesseractConstant {
      */
     public static final String NEED_OTHERS_VALUE = "1";
     
-    
 }

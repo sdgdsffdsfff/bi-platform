@@ -163,7 +163,7 @@ public class SqlDataQueryServiceImpl implements DataQueryService {
 //                LOGGER.info ("[INFO] --- --- query sql : " + sqlQuery.toSql ());
                 PreparedStatement pstmt =
                         con.prepareStatement(sqlQuery.toSql(), 
-                        ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+                                ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
                 if (con.getMetaData().getDriverName().toLowerCase().contains("mysql")) {
                         pstmt.setFetchSize(Integer.MIN_VALUE);
                 }

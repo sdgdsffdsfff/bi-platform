@@ -19,6 +19,8 @@
 package com.baidu.rigel.biplatform.tesseract.datasource;
 
 
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +53,14 @@ public interface DataSourcePoolService {
      * @throws IllegalArgumentException 数据源信息校验失败
      */
     void initDataSourceInfo(DataSourceInfo dataSourceInfo) throws DataSourceException;
+    
+    /**
+     * 初始化数据源信息，包括数据源信息存储和建立数据源
+     * @param dataSourceInfo 数据源信息
+     * @throws DataSourceException 初始化失败
+     * @throws IllegalArgumentException 数据源信息校验失败
+     */
+    void initDataSourceInfoList(List<DataSourceInfo> dataSourceInfoList) throws DataSourceException;
 
     /**
      * 更新数据源信息（找到原来的数据源先销毁再重建，不涉及缓存操作，缓存操作需单独操作）

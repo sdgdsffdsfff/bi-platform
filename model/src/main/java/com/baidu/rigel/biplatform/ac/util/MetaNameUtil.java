@@ -18,6 +18,7 @@
  */
 package com.baidu.rigel.biplatform.ac.util;
 
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
@@ -28,6 +29,7 @@ import com.baidu.rigel.biplatform.ac.minicube.MiniCubeDimension;
 import com.baidu.rigel.biplatform.ac.model.Measure;
 import com.baidu.rigel.biplatform.ac.model.Member;
 import com.baidu.rigel.biplatform.ac.model.OlapElement;
+import com.google.common.collect.Lists;
 
 /**
  * 元数据名称操作的工具类
@@ -120,6 +122,20 @@ public class MetaNameUtil {
     }
 
     /**
+     * 用中括号将Member列表的name包住
+     * 
+     * @param metaNames member的name
+     * @return @return 封装好的UniqueName列表
+     */
+    public static List<String> makeUniqueNameList(String[] metaNames) {
+        List<String> makeUniqueNameList = Lists.newArrayList();
+        for (String metaName : metaNames) {
+            makeUniqueNameList.add(makeUniqueName(metaName));
+        }
+        return makeUniqueNameList;
+    }
+
+    /**
      * 将一个UniqueName转换成字符串数组
      * 
      * @param uniqueName 一个UniqueName
@@ -130,17 +146,32 @@ public class MetaNameUtil {
         if (!isUniqueName(uniqueName)) {
             throw new IllegalArgumentException("uniqueName is illegal:" + uniqueName);
         }
-        String preSplitUniqueName = uniqueName;
-        if (preSplitUniqueName.startsWith("[")) {
-            preSplitUniqueName = preSplitUniqueName.substring(1);
-        }
-        if (preSplitUniqueName.endsWith("]")) {
-            preSplitUniqueName = preSplitUniqueName.substring(0, preSplitUniqueName.length() - 2);
-        }
-        // 先按照].[去截取，以后考虑更好方法
-        return StringUtils.split(uniqueName, "].[");
+        uniqueName = uniqueName.substring(1, uniqueName.lastIndexOf("]"));
+        return StringUtils.splitByWholeSeparator(uniqueName, "].[");
     }
     
+    /**
+     * 根据给定的uniqueName以及传入的序号，截取出符合序号描述的子uniqueName
+     * 
+     * @param uniqueName 待截取的uniqueName
+     * @param index 截取第几位符合规则的字符串
+     * @return 截取完成的子字符串
+     */
+    public static String subUniqueNameOfIndexFlag(String uniqueName, int index) {
+        if (uniqueName == null || uniqueName.length() == 0) {
+            return null;
+        }
+        String[] nameArray = parseUnique2NameArray(uniqueName);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < index; i++) {
+            String singleName = nameArray[i];
+            sb.append(makeUniqueName(singleName));
+            if (i < index - 1) {
+                sb.append(".");
+            }
+        }
+        return sb.toString();
+    }
     
     /** 
      * getNameFromMetaName 从元数据名称中获取名称信息
@@ -171,6 +202,33 @@ public class MetaNameUtil {
         String[] names = parseUnique2NameArray(uniqueName);
         if (names.length == 2 && isAllMemberName(names[1])) {
             return true;
+        }
+        return false;
+    }
+    
+    /**
+     * 判断一个UniqueName是否是一个all节点的UniqueName,用户多级的查询
+     * 
+     * @param uniqueName 节点的UniqueName
+     * @param 取index的值 至少2级，index从0开始
+     * @return 是否是all节点
+     * @throws IllegalArgumentException unique格式不正确
+     */
+    public static boolean isAllMemberUniqueName(String uniqueName, int index) {
+        if (!isUniqueName(uniqueName)) {
+            LOGGER.warn("uniqueName is illegal:" + uniqueName);
+            return false;
+        }
+
+        String[] names = parseUnique2NameArray(uniqueName);
+        if (index < 1 ||  index >= names.length) {
+        // 至少2级，index从0开始
+            index = names.length - 1;
+        }
+        if (names.length == 2 && isAllMemberName(names[1])) {
+            return true;
+        } else if (names.length > 2) {
+            return isAllMemberName(names[index]);
         }
         return false;
     }

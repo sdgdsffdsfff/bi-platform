@@ -14,6 +14,7 @@ define([
         'report/edit/canvas/chart-setting/chart-setting-view',
         'report/edit/canvas/table-setting/table-setting-view',
         'report/edit/canvas/plane-table-setting/plane-table-setting-view',
+        'report/edit/canvas/olap-table-setting/olap-table-setting-view',
         // html模板区域
         'report/edit/canvas/comp-setting-default-template',
         'report/edit/canvas/comp-setting-time-template',
@@ -39,6 +40,7 @@ define([
         ChartSettingView,
         TableSettingView,
         PlaneTableSettingView,
+        OlapTableSettingView,
         // html模板区域
         compSettingDefaultTemplate,
         compSettingTimeTemplate,
@@ -1761,6 +1763,22 @@ define([
                     this.planeTableSettingView.destroy();
                 }
                 this.planeTableSettingView = new PlaneTableSettingView({
+                    el: el,
+                    reportId: this.model.reportId,
+                    canvasView: this.canvasView
+                });
+            },
+
+            /**
+             * 初始化透视表格设置区域视图
+             *
+             * @param {Object} el 表格编辑区的dom元素
+             */
+            _initLITEOLAPSettingView: function (el) {
+                if (this.olapTableSettingView) {
+                    this.olapTableSettingView.destroy();
+                }
+                this.olapTableSettingView = new OlapTableSettingView({
                     el: el,
                     reportId: this.model.reportId,
                     canvasView: this.canvasView

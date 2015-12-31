@@ -63,29 +63,30 @@ public interface MetaDataService {
      * 将数据源信息对应的一系列cube执行发布事件，并缓存数据源信息和cube信息
      * 
      * @param cubes 待发布的事件
-     * @param dataSourceInfo 发布数据源
+     * @param dataSourceInfoList 发布数据源列表
      * @throws Exception
      */
-    void publish(List<Cube> cubes, DataSourceInfo dataSourceInfo) throws Exception;
+    void publish(List<Cube> cubes, List<DataSourceInfo> dataSourceInfoList) throws Exception;
     
     
     
     /** 
      * refresh 刷新
-     * @param dataSourceInfo
+     * @param dataSourceInfoList
      * @param dataSetStr
      * @throws Exception
      */
-    void refresh(DataSourceInfo dataSourceInfo, String dataSetStr) throws Exception;
+    void refresh(List<DataSourceInfo> dataSourceInfoList, String dataSetStr) throws Exception;
     
     /**
      * refresh 刷新
-     * @param dataSourceInfo
+     * @param dataSourceInfoList
      * @param dataSetStr
      * @param params
      * @throws Exception
      */
-    void refresh(DataSourceInfo dataSourceInfo, String dataSetStr, Map<String,Map<String,BigDecimal>> params) throws Exception;
+    void refresh(List<DataSourceInfo> dataSourceInfoList, String dataSetStr,
+            Map<String, Map<String, BigDecimal>> params) throws Exception;
 
     /**
      * 获取level的members
@@ -198,6 +199,14 @@ public interface MetaDataService {
             throw new IllegalArgumentException("dataSourceInfo is illgeal:" + dataSourceInfo);
         }
     }
+    
+    public static boolean validateDataSourceInfo(DataSourceInfo dataSourceInfo) {
+        if (dataSourceInfo == null || !dataSourceInfo.validate()) {
+            return false;
+        }
+        return true;
+    }
+    
 
     /**
      * 校验cube

@@ -17,25 +17,23 @@ package com.baidu.rigel.biplatform.ma.report.model;
 
 import java.io.Serializable;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import com.baidu.rigel.biplatform.ac.model.Cube;
 import com.baidu.rigel.biplatform.ac.query.data.DataSourceInfo;
-import com.baidu.rigel.biplatform.ma.report.query.ResultSet;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 /**
  * 扩展区域对应上下文：存储当前区域的参数、面包屑、查询结果纪录、下钻／上卷纪录，区域定义信息
+ * 
  * @author david.wang
  *
  */
 public class ExtendAreaContext implements Serializable {
-    
+
     /**
      * serialVersionUID
      */
@@ -45,12 +43,12 @@ public class ExtendAreaContext implements Serializable {
      * 区域id
      */
     private String areaId;
-    
+
     /**
      * 区域类型
      */
     private ExtendAreaType areaType;
-    
+
     /**
      * 格式化信息
      */
@@ -60,72 +58,67 @@ public class ExtendAreaContext implements Serializable {
      * 面包屑路径
      */
     private List<Map<String, String>> curBreadCrumPath;
-    
+
     /**
      * 当前操作下钻条目
      */
     private String drillItemValue;
-    
+
     /**
      * 报表id
      */
     private String reportId;
-    
+
     /**
      * 当前上下文包含的参数信息
      */
     private Map<String, Object> params = Maps.newConcurrentMap();
-    
+
     /**
      * 区域x轴对应的查询条目
      */
     private LinkedHashMap<Item, Object> x = Maps.newLinkedHashMap();
-    
+
     /**
      * 区域y轴对应的查询条目
      */
     private LinkedHashMap<Item, Object> y = Maps.newLinkedHashMap();
-    
+
     /**
      * 区域过滤轴对应的查询条目
      */
     private LinkedHashMap<Item, Object> s = Maps.newLinkedHashMap();
-    
+
     /**
      * 区域备选维度轴对应的条目信息
      */
     private Set<Item> canDim = Sets.newLinkedHashSet();
-    
+
     /**
      * 区域备选指标轴对应的条目
      */
     private Set<Item> canInd = Sets.newLinkedHashSet();
-    
+
     /**
      * 
      */
     private Map<String, Item> selectDims = Maps.newHashMap();
-    
+
     /**
      * 
      */
     private Map<String, Item> selectMeasures = Maps.newHashMap();
-    
-    /**
-     * 查询请求历史纪录
-     */
-    private LinkedList<ResultSet> queryStatus = Lists.newLinkedList();
-    
+
     /**
      * 区域默认使用的数据源列表
      */
     private DataSourceInfo defaultDsInfo;
-    
+
     /**
      * 备用条目、数据源信息对应关系，后续跨库查询使用
      */
     private Map<Item, DataSourceInfo> dsInfo;
-    
+
     /**
      * 依据扩展区域定义生成的cube，在运行时，此cube不会发生变化
      */
@@ -300,20 +293,6 @@ public class ExtendAreaContext implements Serializable {
     }
 
     /**
-     * @return the queryStatus
-     */
-    public LinkedList<ResultSet> getQueryStatus() {
-        return queryStatus;
-    }
-
-    /**
-     * @param queryStatus the queryStatus to set
-     */
-    public void setQueryStatus(LinkedList<ResultSet> queryStatus) {
-        this.queryStatus = queryStatus;
-    }
-
-    /**
      * @return the defaultDsInfo
      */
     public DataSourceInfo getDefaultDsInfo() {
@@ -382,5 +361,5 @@ public class ExtendAreaContext implements Serializable {
     public void setSelectMeasures(Map<String, Item> selectMeasures) {
         this.selectMeasures = selectMeasures;
     }
-    
+
 }

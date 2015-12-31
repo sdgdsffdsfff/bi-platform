@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import com.baidu.rigel.biplatform.ac.annotation.GsonIgnore;
 import com.baidu.rigel.biplatform.ac.query.model.SortRecord.SortType;
@@ -338,6 +339,116 @@ public class MemberNodeTree implements Serializable, Comparable<MemberNodeTree> 
         this.isSummary = isSummary;
     }
 
+    /**
+     * 根据给定的uniqueName，找到该tree对应uniqueName所在的节点
+     * @param uniqueName uniqueName
+     * @return 返回指定uniqueName对应的MemberNodeTree节点
+     */
+    public MemberNodeTree getMemberNodeTreeByUniqueName(String uniqueName) {
+        MemberNodeTree rs = null;
+        if (StringUtils.isEmpty(uniqueName)) {
+            return null;
+        }
+        if (uniqueName.equals(this.getUniqueName())) {
+            return this;
+        }
+        if (CollectionUtils.isNotEmpty(this.getChildren())) {
+            for (MemberNodeTree child : this.getChildren()) {
+                rs = child.getMemberNodeTreeByUniqueName(uniqueName);
+                if (rs == null) {
+                    continue;
+                }
+                return rs;
+            }
+        } 
+        return rs;
+    }
+    
+    /**
+     * 根据给定的name，找到该tree对应name所在的节点
+     * 
+     * @param name name
+     * @return 返回指定name对应的MemberNodeTree节点
+     */
+    public MemberNodeTree getMemberNodeTreeByName(String name) {
+        MemberNodeTree rs = null;
+        if (StringUtils.isEmpty(name)) {
+            return null;
+        }
+        if (name.equals(this.getName())) {
+            return this;
+        }
+        if (CollectionUtils.isNotEmpty(this.getChildren())) {
+            for (MemberNodeTree child : this.getChildren()) {
+                rs = child.getMemberNodeTreeByName(name);
+                if (rs == null) {
+                    continue;
+                }
+                return rs;
+            }
+        } 
+        return rs;
+    }
+    
+    /**
+     * 将MemberNodeTree里的层级关系转换为list列表平铺模式返回
+     * 
+     * @param rs 要返回的结果集
+     * @param memberNodeTree memberNodeTree
+     * @return 返回MemberNodeTree里的层级关系转换为list的列表
+     */
+    public List<MemberNodeTree> transMemberNodeTreeToList(List<MemberNodeTree> rs, MemberNodeTree memberNodeTree) {
+        if (rs == null) {
+            rs = new ArrayList<MemberNodeTree>();
+        }
+        if (!StringUtils.isEmpty(memberNodeTree.getName())) {
+            if (!rs.contains(memberNodeTree)) {
+                rs.add(memberNodeTree);
+            }
+            for (int i = 0; i < memberNodeTree.getChildren().size(); i++) {
+                if (memberNodeTree.getChildren() != null) {
+                    MemberNodeTree child = memberNodeTree.getChildren().get(i);
+                    if (child != null) {
+                        if (!rs.contains(child)) {
+                            rs.add(child);
+                        }
+                        if (child != null) {
+                            transMemberNodeTreeToList(rs, child);
+                        }
+                    }
+                }
+            }
+        } else {
+            transMemberNodeTreeToList(rs, memberNodeTree.getChildren().get(0));
+        }
+        return rs;
+    }
+    
+    /**
+     * 根据给定的树节点，找到该节点下对应的所有最细粒度子节点集合
+     * 
+     * @param rs 要返回的结果集
+     * @param memberNodeTree 要查找的tree节点
+     * @return 返回该节点下对应的所有最细粒度子节点集合
+     */
+    public List<MemberNodeTree> getLastChildNodes(List<MemberNodeTree> rs, MemberNodeTree memberNodeTree) {
+        if (rs == null) {
+            rs = new ArrayList<MemberNodeTree>();
+        }
+        if (!CollectionUtils.isEmpty(memberNodeTree.getChildren())) {
+            for (MemberNodeTree child : memberNodeTree.getChildren()) {
+                if (CollectionUtils.isEmpty(child.getChildren())) {
+                    if (!rs.contains(child)) {
+                        rs.add(child);
+                    }
+                } else {
+                    this.getLastChildNodes(rs, child);
+                }
+            }
+        }
+        return rs;
+    }
+    
     public void sort(SortType sortType) {
         if(CollectionUtils.isNotEmpty(this.children)) {
             if(sortType == SortType.DESC) {

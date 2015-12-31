@@ -48,19 +48,20 @@ public interface IndexService {
      *            是否是sample模式索引
      * @return boolean true表示成功；
      */
-    boolean initMiniCubeIndex(List<Cube> cubeList, DataSourceInfo dataSourceInfo,
+    boolean initMiniCubeIndex(List<Cube> cubeList, List<DataSourceInfo> dataSourceInfoList,
         boolean indexAsap, boolean limited) throws IndexAndSearchException;
     
     
     /**
      * updateIndexByDataSourceKey 跟据数据源、事实表增量更新索引数据
-     * @param dataSourceKey 数据源信息
+     * @param dataSourceKeyList 数据源信息
      * @param factTableNames 事实表信息
      * @param dataSetMap 待修订的事实表及起始ID信息
      * 
      * @throws Exception 
      */
-    void updateIndexByDataSourceKey(String dataSourceKey,String[] factTableNames, Map<String,Map<String,BigDecimal>> dataSetMap) throws  Exception;
+    void updateIndexByDataSourceKey(List<String> dataSourceKeyList, String[] factTableNames,
+            Map<String, Map<String, BigDecimal>> dataSetMap) throws Exception;
     
     /**
      * 暂存分片拷贝结果信息
